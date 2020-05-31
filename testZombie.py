@@ -2,13 +2,13 @@ import unittest
 import numpy as np
 import gameGrid
 import zombie
-import env
+import envManager
 
 
 class TestZombie(unittest.TestCase):
 
     def setUp(self):
-        self.env = env.Env(gameGrid.Grid(10, 5), np.pi / 10, 1, 1, 2)
+        self.env = envManager.EnvManager(gameGrid.Grid(10, 5), np.pi / 10, 1, 1, 2)
         self.zombie = zombie.Zombie(id=0, angle=0, velocity=1, y=5, env=self.env)
 
     def test_step_x(self):
