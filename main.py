@@ -30,20 +30,24 @@ from qValues import QValues
     3. calculate rewards and let the agents learn from it
     4. the environment is taking one step of all zombies
 """
+import os
+# os.environ["SDL_VIDEODRIVER"] = "dummy"
+
 # set seed
 np.random.seed(679)
 random.seed(679)
 
 # top parameters
 target_update = 10
-num_episodes = 1000
-# in env we defined 50 steps per episode
+num_episodes = 100000
+STEPS_PER_EPISODE = 100
+CHECKPOINT = 10
 
 # learning parameters
-batch_size = 256
+batch_size = 128
 gamma = 0.999
-eps_start = 1
-eps_end = 0.01
+eps_start = 0.9
+eps_end = 0.05
 eps_decay = 0.001
 memory_size = 100000
 lr = 0.001
@@ -52,8 +56,8 @@ is_ipython = 'inline' in matplotlib.get_backend()
 if is_ipython: from IPython import display
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-env = Env(GameGrid(8, 16))
 
+env = Env(GameGrid(8, 16), STEPS_PER_EPISODE)
 em = EnvManager(env, device)
 strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay)
 
@@ -116,12 +120,23 @@ def plot(values, moving_avg_period):
     if is_ipython: display.clear_output(wait=True)
 
 
+def save_checkpoint(episode, target_net, policy_net, optimizer, loss, path):
+    torch.save({
+        'episode': episode,
+        'target_net_state_dict': target_net.state_dict(),
+        'policy_net_state_dict': policy_net.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss': loss,
+    }, path)
+
+
 for episode in range(num_episodes):
     em.reset()
     state = em.get_state()
     zombie_master_reward = 0
-# plt.figure() ;plt.imshow(state.squeeze(0).permute(1, 2, 0).cpu(), interpolation='none'); plt.title('Processed screen example'); plt.show()
+    # plt.figure() ;plt.imshow(state.squeeze(0).permute(1, 2, 0).cpu(), interpolation='none'); plt.title('Processed screen example'); plt.show()
     for time_step in count():
+        time.sleep(3)
         action_zombie = agent_zombie.select_action(state, policy_net_zombie)
         action_light = agent_light.select_action(state, policy_net_light)
 
@@ -137,54 +152,44 @@ for episode in range(num_episodes):
         if memory_zombie.can_provide_sample(batch_size):
             experiences_zombie = memory_zombie.sample(batch_size)
             states, actions, rewards, next_states = extract_tensors(experiences_zombie)
-
+            """
+            # In the mean time I'm trying to teach the light master alone (while the zombie master takes random actions)
+            # so, all this part is surrounded with block comment
             current_q_values = QValues.get_current(policy_net_zombie, states, actions)
             next_q_values = QValues.get_next(target_net_zombie, next_states)
             target_q_values = (next_q_values * gamma) + rewards
-
-            loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
+            
+            loss_zombie = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
             optimizer_zombie.zero_grad()
-            loss.backward()
+            loss_zombie.backward()
             optimizer_zombie.step()
-
+            
             experiences_light = memory_light.sample(batch_size)
             states, actions, rewards, next_states = extract_tensors(experiences_light)
-
+            """
             current_q_values = QValues.get_current(policy_net_light, states, actions)
             next_q_values = QValues.get_next(target_net_light, next_states)
             target_q_values = (next_q_values * gamma) + rewards
 
-            loss = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
+            loss_light = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
             optimizer_light.zero_grad()
-            loss.backward()
+            loss_light.backward()
             optimizer_light.step()
 
         if em.done:  # if the episode is done, store it's reward and plot the moving average
             episode_rewards.append(zombie_master_reward)
-            plot(episode_rewards, 10)
+            plot(episode_rewards, 20)
             break
 
     if episode % target_update == 0:
+        # update the target net to the same model dict as the policy net
         target_net_light.load_state_dict(policy_net_light.state_dict())
         target_net_zombie.load_state_dict(policy_net_zombie.state_dict())
 
-"""
-# create the environment
-env = env.Env(gameGrid.GameGrid(8, 16))
-# create the agents
-light_agent = lightMaster.LightMaster(env)
-zombie_agent = zombieMaster.ZombieMaster(env)
-game_window = env.Env(env)
-for i in range(400):
-    time.sleep(1)
-    print("------ step", i, "------")
-    zombie_action = zombie_agent.step()  # added zombie to env_manager
-    light_action = light_agent.step()  # chose where to place the light
-    reward = env.get_reward(light_action)
-    zombie_agent.learn(reward)
-    light_agent.learn(reward)
-    game_window.update(env.alive_zombies, light_action)
-    env.step(game_window.game_display.display.get_surface())
-
-game_window.end_game()
-"""
+    if episode % CHECKPOINT == 0:
+        save_checkpoint(episode, target_net_zombie, policy_net_zombie, optimizer_zombie, 0,
+                        '../FinalProjectRL/model/zombie.pth')
+        save_checkpoint(episode, target_net_light, policy_net_light, optimizer_light, 0,
+                        '../FinalProjectRL/model/light.pth')
+        plt.savefig('../FinalProjectRL/model/reward.png',
+                    bbox_inches='tight')

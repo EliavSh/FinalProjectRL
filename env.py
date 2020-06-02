@@ -6,7 +6,6 @@ import math
 import random
 import zombie
 
-STEPS_IN_EPISODE = 100
 
 DISPLAY_WIDTH = 1600
 DISPLAY_HEIGHT = 800
@@ -27,9 +26,10 @@ def calculate_start_positions(grid):
 
 class Env:
 
-    def __init__(self, grid: gameGrid):
+    def __init__(self, grid: gameGrid, steps_per_episodes):
         pygame.init()
         pygame.display.set_caption('pickleking')
+        self.steps_per_episodes = steps_per_episodes
         self.max_hit_points = MAX_HIT_POINTS
         self.display_width = DISPLAY_WIDTH
         self.display_height = DISPLAY_HEIGHT
@@ -79,8 +79,6 @@ class Env:
                 amount of reward achieved by the previous action.
             episode_over (bool) :
                 whether it's time to reset the environment again.
-            info (dict) :
-                diagnostic information useful for debugging.
         """
         self.current_time += 1
         self.add_zombie(zombie_action)
@@ -100,7 +98,7 @@ class Env:
         # print(damaged_zombies)
         # update display
         self.update(light_action)
-        return self.get_state(), reward, self.current_time > STEPS_IN_EPISODE  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
+        return self.get_state(), reward, self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
 
     def keep_alive(self, h):
         if h > self.max_hit_points:  # if the zombie has sustain a lot of damaged
@@ -181,14 +179,3 @@ class Env:
     def end_game(self):
         pygame.quit()
         quit()
-
-
-"""
-        while not crashed:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    crashed = True
-        
-        
-        pygame.image.load('gameUtils/pickle_rick_tiny.PNG')
-"""

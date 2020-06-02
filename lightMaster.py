@@ -1,6 +1,6 @@
 import random
 import torch
-import numpy as np
+
 
 def init_q():
     pass
@@ -24,11 +24,3 @@ class LightMaster:
         else:
             with torch.no_grad():
                 return policy_net(state).argmax(dim=1).to(self.device)  # exploit
-
-
-"""
-    def step(self):
-        self.current_action = random.randint(0, self.env.grid.get_height() * self.env.grid.get_width())
-        print("LightMaster action:", self.current_action)
-        return self.current_action
-"""
