@@ -8,7 +8,6 @@ def init_q():
 
 class LightMaster:
     def __init__(self, strategy, num_actions, device):
-        self.current_action = 0  # TODO - delete because we don't need to save the action after we chose it, just pass it to the environment
         self.strategy = strategy
         self.device = device
         self.current_step = 0

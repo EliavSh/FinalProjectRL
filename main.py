@@ -7,10 +7,9 @@ import random
 import matplotlib
 import matplotlib.pyplot as plt
 from itertools import count
+import pandas as pd
 
 from gameGrid import GameGrid
-import lightMaster
-import zombieMaster
 from env import Env
 from envManager import EnvManager
 from epsilonGreedyStrategy import EpsilonGreedyStrategy
@@ -31,7 +30,8 @@ from qValues import QValues
     4. the environment is taking one step of all zombies
 """
 import os
-# os.environ["SDL_VIDEODRIVER"] = "dummy"
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 # set seed
 np.random.seed(679)
@@ -39,17 +39,17 @@ random.seed(679)
 
 # top parameters
 target_update = 10
-num_episodes = 100000
-STEPS_PER_EPISODE = 100
-CHECKPOINT = 10
+num_episodes = 1000
+STEPS_PER_EPISODE = 1000
+CHECKPOINT = 1
 
 # learning parameters
-batch_size = 128
+batch_size = 256
 gamma = 0.999
 eps_start = 0.9
 eps_end = 0.05
-eps_decay = 0.001
-memory_size = 100000
+eps_decay = 0.000001
+memory_size = 10000
 lr = 0.001
 
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -57,7 +57,7 @@ if is_ipython: from IPython import display
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-env = Env(GameGrid(8, 16), STEPS_PER_EPISODE)
+env = Env(GameGrid(4, 8), STEPS_PER_EPISODE)
 em = EnvManager(env, device)
 strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay)
 
@@ -78,6 +78,7 @@ target_net_light.eval()
 optimizer_light = optim.Adam(params=policy_net_light.parameters(), lr=lr)
 
 episode_rewards = []
+episode_durations = []
 
 
 def extract_tensors(experiences):
@@ -105,7 +106,10 @@ def get_moving_average(period, values):
 
 
 def plot(values, moving_avg_period):
-    plt.figure(2)
+    # turn interactive mode off
+    plt.ioff()
+
+    fig = plt.figure(2)
     plt.clf()
     plt.title('Training...')
     plt.xlabel('Episode')
@@ -114,10 +118,11 @@ def plot(values, moving_avg_period):
 
     moving_avg = get_moving_average(moving_avg_period, values)
     plt.plot(moving_avg)
-    plt.pause(0.001)
     print("Episode", len(values), "\n",
           moving_avg_period, "episode moving avg:", moving_avg[-1])
-    if is_ipython: display.clear_output(wait=True)
+    if is_ipython:
+        display.clear_output(wait=True)
+    return fig
 
 
 def save_checkpoint(episode, target_net, policy_net, optimizer, loss, path):
@@ -135,8 +140,8 @@ for episode in range(num_episodes):
     state = em.get_state()
     zombie_master_reward = 0
     # plt.figure() ;plt.imshow(state.squeeze(0).permute(1, 2, 0).cpu(), interpolation='none'); plt.title('Processed screen example'); plt.show()
+    episode_start_time = time.time()
     for time_step in count():
-        time.sleep(3)
         action_zombie = agent_zombie.select_action(state, policy_net_zombie)
         action_light = agent_light.select_action(state, policy_net_light)
 
@@ -149,9 +154,9 @@ for episode in range(num_episodes):
 
         state = next_state
 
-        if memory_zombie.can_provide_sample(batch_size):
-            experiences_zombie = memory_zombie.sample(batch_size)
-            states, actions, rewards, next_states = extract_tensors(experiences_zombie)
+        if memory_light.can_provide_sample(batch_size):
+            experiences_light = memory_light.sample(batch_size)
+            states, actions, rewards, next_states = extract_tensors(experiences_light)
             """
             # In the mean time I'm trying to teach the light master alone (while the zombie master takes random actions)
             # so, all this part is surrounded with block comment
@@ -178,7 +183,7 @@ for episode in range(num_episodes):
 
         if em.done:  # if the episode is done, store it's reward and plot the moving average
             episode_rewards.append(zombie_master_reward)
-            plot(episode_rewards, 20)
+            episode_durations.append(time.time() - episode_start_time)
             break
 
     if episode % target_update == 0:
@@ -191,5 +196,11 @@ for episode in range(num_episodes):
                         '../FinalProjectRL/model/zombie.pth')
         save_checkpoint(episode, target_net_light, policy_net_light, optimizer_light, 0,
                         '../FinalProjectRL/model/light.pth')
+
+        fig = plot(episode_rewards, 20)
         plt.savefig('../FinalProjectRL/model/reward.png',
                     bbox_inches='tight')
+        plt.close(fig)
+
+        df = pd.DataFrame({'reward': list(torch.cat(episode_rewards, -1).numpy()), 'episode_duration': episode_durations})
+        df.to_csv('../FinalProjectRL/model/log.csv')
