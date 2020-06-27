@@ -149,8 +149,8 @@ for episode in range(num_episodes):
         zombie_master_reward += reward
         next_state = em.get_state()
 
-        memory_zombie.push(Experience(state, action_zombie, next_state, reward))
-        memory_light.push(Experience(state, action_light, next_state, -reward))
+        memory_zombie.push(Experience(state.unsqueeze(0), action_zombie, next_state, reward))
+        memory_light.push(Experience(state.unsqueeze(0), action_light, next_state, -reward))
 
         state = next_state
 
