@@ -39,8 +39,8 @@ random.seed(679)
 
 # top parameters
 target_update = 10
-num_episodes = 1000
-STEPS_PER_EPISODE = 1000
+num_episodes = 10000
+STEPS_PER_EPISODE = 200
 CHECKPOINT = 1
 
 # learning parameters
@@ -48,7 +48,7 @@ batch_size = 256
 gamma = 0.999
 eps_start = 0.9
 eps_end = 0.05
-eps_decay = 0.000001
+eps_decay = 2/(num_episodes * STEPS_PER_EPISODE)
 memory_size = 10000
 lr = 0.001
 
@@ -57,7 +57,7 @@ if is_ipython: from IPython import display
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-env = Env(GameGrid(4, 8), STEPS_PER_EPISODE)
+env = Env(GameGrid(3, 3), STEPS_PER_EPISODE)
 em = EnvManager(env, device)
 strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay)
 
@@ -154,10 +154,10 @@ for episode in range(num_episodes):
 
         state = next_state
 
-        if memory_light.can_provide_sample(batch_size):
-            experiences_light = memory_light.sample(batch_size)
-            states, actions, rewards, next_states = extract_tensors(experiences_light)
-            """
+        if memory_zombie.can_provide_sample(batch_size):
+            experiences_zombie = memory_zombie.sample(batch_size)
+            states, actions, rewards, next_states = extract_tensors(experiences_zombie)
+
             # In the mean time I'm trying to teach the light master alone (while the zombie master takes random actions)
             # so, all this part is surrounded with block comment
             current_q_values = QValues.get_current(policy_net_zombie, states, actions)
@@ -168,10 +168,10 @@ for episode in range(num_episodes):
             optimizer_zombie.zero_grad()
             loss_zombie.backward()
             optimizer_zombie.step()
-            
+            """
             experiences_light = memory_light.sample(batch_size)
             states, actions, rewards, next_states = extract_tensors(experiences_light)
-            """
+
             current_q_values = QValues.get_current(policy_net_light, states, actions)
             next_q_values = QValues.get_next(target_net_light, next_states)
             target_q_values = (next_q_values * gamma) + rewards
@@ -180,6 +180,7 @@ for episode in range(num_episodes):
             optimizer_light.zero_grad()
             loss_light.backward()
             optimizer_light.step()
+            """
 
         if em.done:  # if the episode is done, store it's reward and plot the moving average
             episode_rewards.append(zombie_master_reward)

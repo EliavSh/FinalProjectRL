@@ -9,7 +9,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 
-
 """
 Assumptions - data types:
 angle: float in range [-zombie_max_angle, zombie_max_angle] radians
@@ -35,7 +34,8 @@ class EnvManager:
         return self.env.action_space()
 
     def take_action(self, action_zombie, action_light):
-        _, reward, self.done = self.env.step(action_zombie, action_light)  # TODO - here is used to be action.item() instead of just action, need to see how its affect us
+        _, reward, self.done = self.env.step(action_zombie,
+                                             action_light)  # TODO - here is used to be action.item() instead of just action, need to see how its affect us
         return torch.tensor([reward], device=self.device)
 
     def just_starting(self):
@@ -43,6 +43,14 @@ class EnvManager:
         return self.current_screen is None
 
     def get_state(self):
+        zombie_grid = self.env.grid.get_values()
+        zombie_grid = zombie_grid.astype(np.float32)
+        zombie_grid.fill(0)
+        for i in self.env.alive_zombies:
+            zombie_grid[int(i.y), int(i.x)] = 1
+        return torch.from_numpy(zombie_grid)
+
+    def get_state_old(self):
         if self.just_starting() or self.done:
             self.current_screen = self.get_processed_screen()
             black_screen = torch.zeros_like(self.current_screen)
@@ -54,12 +62,10 @@ class EnvManager:
             return s2 - s1
 
     def get_screen_height(self):
-        screen = self.get_processed_screen()
-        return screen.shape[2]
+        return self.get_state().shape[0]
 
     def get_screen_width(self):
-        screen = self.get_processed_screen()
-        return screen.shape[3]
+        return self.get_state().shape[1]
 
     def get_processed_screen(self):
         screen = self.env.get_state().transpose((2, 0, 1))  # PyTorch expects CHW
@@ -83,10 +89,10 @@ class EnvManager:
         # Use torchvision package to compose image transforms
         resize = T.Compose([
             T.ToPILImage()
-            , T.Resize((80, 40))
+            , T.Resize((60, 30))
             , T.ToTensor()
         ])
 
         return resize(screen).unsqueeze(0).to(self.device)  # add a batch dimension (BCHW)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
