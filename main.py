@@ -37,14 +37,14 @@ def main():
     os.environ["SDL_VIDEODRIVER"] = "dummy"
 
     # set seed
-    np.random.seed(679)
-    random.seed(679)
+    np.random.seed(1738)
+    random.seed(1738)
 
     # top parameters
     target_update = 10
     num_episodes = 10000
     STEPS_PER_EPISODE = 200
-    CHECKPOINT = 1
+    CHECKPOINT = 5
 
     # learning parameters
     batch_size = 256
@@ -60,7 +60,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    env = Env(GameGrid(4, 8), STEPS_PER_EPISODE)
+    env = Env(GameGrid(5, 5), STEPS_PER_EPISODE)
     em = EnvManager(env, device)
     strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay)
 
@@ -159,13 +159,14 @@ def main():
                 # In the mean time I'm trying to teach the light master alone (while the zombie master takes random actions)
                 # so, all this part is surrounded with block comment
                 current_q_values = QValues.get_current(policy_net_zombie, states, actions)
-                next_q_values = QValues.get_next(target_net_zombie, next_states)
+                next_q_values = QValues.get_next(target_net_zombie, next_states, policy_net_zombie)
                 target_q_values = (next_q_values * gamma) + rewards
 
-                loss_zombie = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
+                loss_zombie = F.mse_loss(current_q_values, target_q_values)
                 optimizer_zombie.zero_grad()
                 loss_zombie.backward()
                 optimizer_zombie.step()
+
                 """
                 experiences_light = memory_light.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_light)
