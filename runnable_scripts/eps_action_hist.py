@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-resolution = 100000
+resolution = 10000
 
-output = pd.read_excel('C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/results/results_07_08_2020_00.xlsx')
+output = pd.read_excel('C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/results/results_07_08_2020_15.xlsx')
 
 data = pd.DataFrame(
     data=np.transpose(np.array([list(map(lambda x: x // resolution, np.array(list(output.index)))), np.array(output['action']), np.ones(len(output))])),

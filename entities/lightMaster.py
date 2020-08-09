@@ -17,12 +17,9 @@ class LightMaster:
         rate = self.strategy.get_exploration_rate(self.current_step)
         self.current_step += 1
 
-        # if rate > random.random():
-        if True:
-            return torch.tensor([0]).to(self.device)  # explore
-        elif True:
+        if rate > random.random():
             action = random.randrange(self.num_actions)
             return torch.tensor([action]).to(self.device)  # explore
         else:
             with torch.no_grad():
-                return policy_net(state).argmax(dim=1).to(self.device)  # exploit
+                return torch.tensor([policy_net(state).argmax(dim=0).data.cpu().numpy()[0]]).to(self.device)  # exploit

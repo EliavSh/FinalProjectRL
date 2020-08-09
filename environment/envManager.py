@@ -60,7 +60,7 @@ class EnvManager:
         return self.env.grid.get_width()
 
     def get_processed_screen(self):
-        screen = self.env.get_state().transpose((2, 0, 1))  # PyTorch expects CHW
+        screen = self.env.get_pygame_window().transpose((2, 0, 1))  # PyTorch expects CHW
         screen = self.crop_screen(screen)
         return self.transform_screen_data(screen)
 

@@ -97,7 +97,7 @@ class Env:
         # print(damaged_zombies)
         # update display
         self.update(light_action)
-        return self.get_state(), reward, self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
+        return self.get_pygame_window(), reward, self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
 
     def keep_alive(self, h):
         if h >= self.max_hit_points:  # if the zombie sustained a lot of damaged
@@ -111,7 +111,7 @@ class Env:
             """
             # return np.sin(np.pi * h / 6) < random.random()  # TODO - uncomment this
 
-    def get_state(self):
+    def get_pygame_window(self):
         return pygame.surfarray.array3d(pygame.display.get_surface())
 
     def add_zombie(self, position):

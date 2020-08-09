@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import numpy as np
 import random
 import matplotlib
-import matplotlib.pyplot as plt
 from itertools import count
 import pandas as pd
 
@@ -19,6 +18,7 @@ from core.replayMemory import ReplayMemory
 from core.DQN import DQN
 from core.experience import Experience
 from core.qValues import QValues
+from runnable_scripts.Utils import extract_tensors, create_dir, eps_action_hist, save_check_point
 
 """
 # create env_manager
@@ -34,17 +34,21 @@ import os
 
 
 def main():
-    os.environ["SDL_VIDEODRIVER"] = "dummy"
+    # os.environ["SDL_VIDEODRIVER"] = "dummy"
+    dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
+                       time.strftime('%d_%m_%Y') + "_at_" + time.strftime('%H_%M'))
+    create_dir(dir)
 
     # set seed
-    np.random.seed(1738)
-    random.seed(1738)
+    np.random.seed(679)
+    random.seed(679)
 
     # top parameters
     target_update = 10
-    num_episodes = 5000
+    num_episodes = 1000
     STEPS_PER_EPISODE = 200
-    CHECKPOINT = 5
+    CHECKPOINT = 100
+    resolution = num_episodes * STEPS_PER_EPISODE / 10
 
     # learning parameters
     batch_size = 256
@@ -52,11 +56,11 @@ def main():
     eps_start = 1
     eps_end = 0.05
     eps_decay = 2 / (num_episodes * STEPS_PER_EPISODE)
-    memory_size = 5000
+    memory_size = 1000
     lr = 0.001
 
     is_ipython = 'inline' in matplotlib.get_backend()
-    if is_ipython: from IPython import display
+    if is_ipython: pass
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -83,56 +87,6 @@ def main():
     episodes_dict = {'episode_rewards': [], 'episode_durations': []}
     steps_dict = {'epsilon': [], 'action': [], 'step': []}
 
-    def extract_tensors(experiences):
-        # Convert batch of Experiences to Experience of batches
-        batch = Experience(*zip(*experiences))
-
-        t1 = torch.cat(batch.state)
-        t2 = torch.cat(batch.action)
-        t3 = torch.cat(batch.reward)
-        t4 = torch.cat(batch.next_state)
-
-        return t1, t2, t3, t4
-
-    def get_moving_average(period, values):
-        values = torch.tensor(values, dtype=torch.float)
-        if len(values) >= period:
-            moving_avg = values.unfold(dimension=0, size=period, step=1) \
-                .mean(dim=1).flatten(start_dim=0)
-            moving_avg = torch.cat((torch.zeros(period - 1), moving_avg))
-            return moving_avg.numpy()
-        else:
-            moving_avg = torch.zeros(len(values))
-            return moving_avg.numpy()
-
-    def plot(values, moving_avg_period):
-        # turn interactive mode off
-        plt.ioff()
-
-        fig = plt.figure(2)
-        plt.clf()
-        plt.title('Training...')
-        plt.xlabel('Episode')
-        plt.ylabel('Total Zombies Survived')
-        plt.plot(values)
-
-        moving_avg = get_moving_average(moving_avg_period, values)
-        plt.plot(moving_avg)
-        print("Episode", len(values), "\n",
-              moving_avg_period, "episode moving avg:", moving_avg[-1])
-        if is_ipython:
-            display.clear_output(wait=True)
-        return fig
-
-    def save_checkpoint(episode, target_net, policy_net, optimizer, loss, path):
-        torch.save({
-            'episode': episode,
-            'target_net_state_dict': target_net.state_dict(),
-            'policy_net_state_dict': policy_net.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss': loss,
-        }, path)
-
     for episode in range(num_episodes):
         em.reset()
         state = em.get_state()
@@ -145,7 +99,7 @@ def main():
 
             # update dict
             steps_dict['epsilon'].append(rate)
-            steps_dict['action'].append(action_zombie.numpy()[0])
+            steps_dict['action'].append(action_light.numpy()[0] // env.grid.get_width())
             steps_dict['step'].append(time_step)
 
             reward = em.take_action(env.start_positions[action_zombie.numpy()], action_light.numpy())
@@ -157,7 +111,8 @@ def main():
 
             state = next_state
 
-            if memory_zombie.can_provide_sample(batch_size):
+            if memory_light.can_provide_sample(batch_size):
+                """
                 experiences_zombie = memory_zombie.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_zombie)
 
@@ -171,20 +126,19 @@ def main():
                 optimizer_zombie.zero_grad()
                 loss_zombie.backward()
                 optimizer_zombie.step()
-
                 """
+
                 experiences_light = memory_light.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_light)
 
                 current_q_values = QValues.get_current(policy_net_light, states, actions)
-                next_q_values = QValues.get_next(target_net_light, next_states)
+                next_q_values = QValues.get_next(target_net_light, next_states, policy_net_light)
                 target_q_values = (next_q_values * gamma) + rewards
 
-                loss_light = F.mse_loss(current_q_values, target_q_values.unsqueeze(1))
+                loss_light = F.mse_loss(current_q_values, target_q_values)
                 optimizer_light.zero_grad()
                 loss_light.backward()
                 optimizer_light.step()
-                """
 
             if em.done:  # if the episode is done, store it's reward and plot the moving average
                 episodes_dict['episode_rewards'].append(zombie_master_reward)
@@ -197,31 +151,29 @@ def main():
             target_net_zombie.load_state_dict(policy_net_zombie.state_dict())
 
         if episode % CHECKPOINT == 0:
-            save_checkpoint(episode, target_net_zombie, policy_net_zombie, optimizer_zombie, 0,
-                            '../model/zombie.pth')
-            save_checkpoint(episode, target_net_light, policy_net_light, optimizer_light, 0,
-                            '../model/light.pth')
+            save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
+                             target_net_zombie)
 
-            fig = plot(episodes_dict['episode_rewards'], 20)
-            plt.savefig('../model/reward.png', bbox_inches='tight')
-            plt.close(fig)
-
-            df = pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']})
-            df.to_csv('../model/log.csv')
-
-    writer = pd.ExcelWriter('../results/results_' + time.strftime('%d_%m_%Y_%H') + '.xlsx')
+    save_check_point(dir, num_episodes, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
+                     target_net_zombie)
+    results_file_name = '/results_' + time.strftime('%d_%m_%Y_%H_%M')
+    writer = pd.ExcelWriter(dir + results_file_name + '.xlsx')
     pd.DataFrame(np.transpose(np.array(list(steps_dict.values()))), columns=list(steps_dict.keys())).set_index('step').to_excel(writer,
                                                                                                                                 sheet_name='eps_action_hist')
     pd.DataFrame({'info': [target_update, num_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end, eps_decay, memory_size, lr,
                            target_net_zombie.__str__()]},
                  index=['target_update', 'num_episodes', 'STEPS_PER_EPISODE', 'CHECKPOINT', 'batch_size', 'gamma', 'eps_start', 'eps_end', 'eps_decay',
-                        'memory_size', 'lr', 'target_net_zombie']).to_excel(writer, 'info')
+                        'memory_size', 'lr', 'target_net_zombie']).to_excel(writer, sheet_name='info')
+    pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
+        writer, sheet_name='rewards summary')
     writer.save()
+    eps_action_hist(dir, results_file_name + '.xlsx', resolution, STEPS_PER_EPISODE)
     print('eliav king')
 
 
 if __name__ == '__main__':
-    cProfile.run('main()')
+    main()
+    # cProfile.run('main()')
 
     """
     from pycallgraph import PyCallGraph
