@@ -31,7 +31,7 @@ class EnvManager:
         return torch.tensor([reward], device=self.device)
 
     def just_starting(self):
-        # current screen is set to none in the beggining and in the end of an episode
+        # current screen is set to none in the beginning and in the end of an episode
         return self.current_screen is None
 
     def get_state(self):

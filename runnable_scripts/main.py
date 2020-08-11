@@ -34,7 +34,7 @@ import os
 
 
 def main():
-    # os.environ["SDL_VIDEODRIVER"] = "dummy"
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
     dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
                        time.strftime('%d_%m_%Y') + "_at_" + time.strftime('%H_%M'))
     create_dir(dir)
@@ -45,7 +45,7 @@ def main():
 
     # top parameters
     target_update = 10
-    num_episodes = 1000
+    num_episodes = 6
     STEPS_PER_EPISODE = 200
     CHECKPOINT = 100
     resolution = num_episodes * STEPS_PER_EPISODE / 10
@@ -64,7 +64,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    env = Env(GameGrid(3, 5), STEPS_PER_EPISODE)
+    env = Env(GameGrid(5, 5), STEPS_PER_EPISODE)
     em = EnvManager(env, device)
     strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay)
 
@@ -85,7 +85,8 @@ def main():
     optimizer_light = optim.Adam(params=policy_net_light.parameters(), lr=lr)
 
     episodes_dict = {'episode_rewards': [], 'episode_durations': []}
-    steps_dict = {'epsilon': [], 'action': [], 'step': []}
+    steps_dict_light = {'epsilon': [], 'action': [], 'step': []}
+    steps_dict_zombie = {'epsilon': [], 'action': [], 'step': []}
 
     for episode in range(num_episodes):
         em.reset()
@@ -98,9 +99,12 @@ def main():
             action_light = agent_light.select_action(state, policy_net_light)
 
             # update dict
-            steps_dict['epsilon'].append(rate)
-            steps_dict['action'].append(action_light.numpy()[0] // env.grid.get_width())
-            steps_dict['step'].append(time_step)
+            steps_dict_light['epsilon'].append(rate)
+            steps_dict_light['action'].append(action_light.numpy()[0] // env.grid.get_width())
+            steps_dict_light['step'].append(time_step)
+            steps_dict_zombie['epsilon'].append(rate)
+            steps_dict_zombie['action'].append(int(action_zombie.numpy()[0]))
+            steps_dict_zombie['step'].append(time_step)
 
             reward = em.take_action(env.start_positions[action_zombie.numpy()], action_light.numpy())
             zombie_master_reward += reward
@@ -112,7 +116,6 @@ def main():
             state = next_state
 
             if memory_light.can_provide_sample(batch_size):
-                """
                 experiences_zombie = memory_zombie.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_zombie)
 
@@ -126,7 +129,6 @@ def main():
                 optimizer_zombie.zero_grad()
                 loss_zombie.backward()
                 optimizer_zombie.step()
-                """
 
                 experiences_light = memory_light.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_light)
@@ -158,8 +160,10 @@ def main():
                      target_net_zombie)
     results_file_name = '/results_' + time.strftime('%d_%m_%Y_%H_%M')
     writer = pd.ExcelWriter(dir + results_file_name + '.xlsx')
-    pd.DataFrame(np.transpose(np.array(list(steps_dict.values()))), columns=list(steps_dict.keys())).set_index('step').to_excel(writer,
-                                                                                                                                sheet_name='eps_action_hist')
+    pd.DataFrame(np.transpose(np.array(list(steps_dict_light.values()))), columns=list(steps_dict_light.keys())).set_index('step').to_excel(writer,
+                                                                                                                                sheet_name='light_actions')
+    pd.DataFrame(np.transpose(np.array(list(steps_dict_zombie.values()))), columns=list(steps_dict_zombie.keys())).set_index('step').to_excel(writer,
+                                                                                                                                sheet_name='zombie_actions')
     pd.DataFrame({'info': [target_update, num_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end, eps_decay, memory_size, lr,
                            target_net_zombie.__str__()]},
                  index=['target_update', 'num_episodes', 'STEPS_PER_EPISODE', 'CHECKPOINT', 'batch_size', 'gamma', 'eps_start', 'eps_end', 'eps_decay',

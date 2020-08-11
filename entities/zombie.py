@@ -37,7 +37,7 @@ class Zombie:
             self.hit_points += 1
         else:
             # heal the zombie by (1-epsilon)
-            pass  # self.hit_points *= (1 - self.heal_epsilon)  # TODO - uncomment this
+            self.hit_points *= (1 - self.heal_epsilon)
 
     def move(self, light_action):
         """

@@ -83,7 +83,8 @@ class Env:
         self.add_zombie(zombie_action)
         # damaged_zombies = 0  # for debugging
         reward = 0
-        temp_alive_zombies = list(np.copy(self.alive_zombies))  # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
+        temp_alive_zombies = list(
+            np.copy(self.alive_zombies))  # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
         for z in self.alive_zombies:
             temp_hit_points = z.hit_points
             z.move(light_action)
@@ -103,13 +104,12 @@ class Env:
         if h >= self.max_hit_points:  # if the zombie sustained a lot of damaged
             return False
         else:  # else decide by the sine function -> if the result is greater than 0.5 -> keep alive, else -> kill it (no reward for the zombie master)
-            return True
             """
             the idea is: if the hit points is close to 3 then the result is close to 1 ->
              -> there is small chance for keeping him alive and therefor rewarding the zombie with positive reward
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             """
-            # return np.sin(np.pi * h / 6) < random.random()  # TODO - uncomment this
+            return np.sin(np.pi * h / 6) < random.random()
 
     def get_pygame_window(self):
         return pygame.surfarray.array3d(pygame.display.get_surface())
@@ -146,7 +146,8 @@ class Env:
         # draw and save the grid
         self.draw_grid()
         # return the images in the pygame format
-        return pygame.image.load('../gameUtils/zombie_image.PNG'), pygame.image.load('../gameUtils/light_image.PNG'), pygame.image.load('../gameUtils/grid.jpeg')
+        return pygame.image.load('../gameUtils/zombie_image.PNG'), pygame.image.load('../gameUtils/light_image.PNG'), pygame.image.load(
+            '../gameUtils/grid.jpeg')
 
     def update(self, light_action):
         event = pygame.event.get()

@@ -70,39 +70,52 @@ def save_checkpoint(episode, target_net, policy_net, optimizer, loss, path):
     }, path)
 
 
+def rgb_generator(size):
+    rgb_list = []
+    for i in range(size):
+        rgb_list.append(tuple((np.random.uniform(0.2, 0.8), np.random.uniform(0.2, 0.8), np.random.uniform(0.2, 0.8), np.random.uniform(0.2, 0.8))))
+    return rgb_list
+
+
 def eps_action_hist(dir_path, xlsx_name, resolution, STEPS_PER_EPISODE):
-    # load and set up the data frame
-    output = pd.read_excel(dir_path + xlsx_name)
-    data = pd.DataFrame(
-        data=np.transpose(np.array([list(map(lambda x: x // resolution, np.array(list(output.index)))), np.array(output['action']), np.ones(len(output))])),
-        columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
-    rows = zip(data['step'] * resolution + resolution, data['action'], data['sum'])
-    headers = ['step', 'action', 'sum']
-    df = pd.DataFrame(rows, columns=headers)
+    sheets = ['light_actions', 'zombie_actions']
+    for sheet in sheets:
+        # load and set up the data frame
+        output = pd.read_excel(dir_path + xlsx_name, sheet_name=sheet)
 
-    # define some properties: figsize, margins and colors
-    fig, ax = plt.subplots(figsize=(12, 10))
-    margin_bottom = np.zeros(len(df['step'].drop_duplicates()) - 1)
-    colors = ["#006D2C", "#31A354", "#74C476"]  # TODO - change that to some general number of colors
+        data = pd.DataFrame(
+            data=np.transpose(np.array([list(map(lambda x: x // resolution, np.array(list(output.index)))), np.array(output['action']), np.ones(len(output))])),
+            columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
+        rows = zip(data['step'] * resolution + resolution, data['action'], data['sum'])
+        headers = ['step', 'action', 'sum']
+        df = pd.DataFrame(rows, columns=headers)
 
-    # build the bar plot
-    actions = df['action'].drop_duplicates()
-    for num, action in enumerate(actions):
-        values = list(df[df['action'] == action].loc[:, 'sum'])
-        mar_len = len(margin_bottom)  # length of margins, sometimes exceeds 10 - it's about not relevant residuals
-        df[df['action'] == action].iloc[0:mar_len, :].plot.bar(x='step', y='sum', ax=ax, stacked=True, bottom=margin_bottom, color=colors[num], label=num)
-        margin_bottom += values[0:mar_len]
+        # define some properties: figsize, margins and colors
+        fig, ax = plt.subplots(figsize=(12, 10))
+        margin_bottom = np.zeros(len(df['step'].drop_duplicates()) - 1)
+        # colors = ["#006D2C", "#31A354", "#74C476"]  # TODO - change that to some general number of colors
+        # build the bar plot
+        actions = df['action'].drop_duplicates()
+        colors = rgb_generator(len(actions))
 
-    # plt.show()
-    # set the x-ticks as the episode value and other plot wrappers
-    ax.set_xticklabels(list(range(int(resolution // STEPS_PER_EPISODE), int(1 + 10 * resolution // STEPS_PER_EPISODE), int(resolution // STEPS_PER_EPISODE))), rotation=30)
-    plt.xlabel('Episode', fontsize=14)
-    plt.ylabel('Steps', fontsize=14)
-    plt.title('Actions distribution along different ranges of episodes', fontsize=20)
-    plt.tight_layout()
+        for num, action in enumerate(actions):
+            values = list(df[df['action'] == action].loc[:, 'sum'])
+            mar_len = len(margin_bottom)  # length of margins, sometimes exceeds 10 - it's about not relevant residuals
+            df[df['action'] == action].iloc[0:mar_len, :].plot.bar(x='step', y='sum', ax=ax, stacked=True, bottom=margin_bottom, color=colors[num], label=num)
+            margin_bottom += values[0:mar_len]
 
-    plt.savefig(dir_path + '\\action_hist.png')
-    print('eliav king')
+        # plt.show()
+        # set the x-ticks as the episode value and other plot wrappers
+        ax.set_xticklabels(
+            list(range(int(resolution // STEPS_PER_EPISODE), int(1 + 10 * resolution // STEPS_PER_EPISODE), int(resolution // STEPS_PER_EPISODE) or 1)),
+            rotation=30)
+        plt.xlabel('Episode', fontsize=14)
+        plt.ylabel('Steps', fontsize=14)
+        plt.title('Actions distribution along different ranges of episodes', fontsize=20)
+        plt.tight_layout()
+
+        plt.savefig(dir_path + '\\' + sheet + '_hist.png')
+        print('eliav king')
 
 
 def save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
@@ -124,3 +137,14 @@ if __name__ == '__main__':
     resolution = 20000
     STEPS_PER_EPISODE = 200
     eps_action_hist(dir_path, xlsx_name, resolution, STEPS_PER_EPISODE)
+
+"""
+# draw epsilon graph
+fig, ax = plt.subplots(figsize=(7, 5))
+plt.plot(output['epsilon'])
+plt.xlabel('Simulation steps', fontsize=14)
+plt.ylabel('Epsilon', fontsize=14)
+plt.title('Epsilon decrease over simulation steps')
+plt.show()
+plt.savefig(dir_path + '\\epsilon_graph.png')
+"""
