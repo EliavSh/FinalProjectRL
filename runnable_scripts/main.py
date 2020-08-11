@@ -45,7 +45,7 @@ def main():
 
     # top parameters
     target_update = 10
-    num_episodes = 6
+    num_episodes = 11
     STEPS_PER_EPISODE = 200
     CHECKPOINT = 100
     resolution = num_episodes * STEPS_PER_EPISODE / 10
@@ -64,7 +64,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    env = Env(GameGrid(5, 5), STEPS_PER_EPISODE)
+    env = Env(GameGrid(3, 3), STEPS_PER_EPISODE)
     em = EnvManager(env, device)
     strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay)
 
