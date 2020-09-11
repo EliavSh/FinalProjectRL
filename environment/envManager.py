@@ -38,9 +38,11 @@ class EnvManager:
         zombie_grid = self.env.grid.get_values()
         zombie_grid = zombie_grid.astype(np.float32)
         zombie_grid.fill(0)
+        health_grid = np.copy(zombie_grid)
         for i in self.env.alive_zombies:
             zombie_grid[int(i.y), int(i.x)] = 1
-        return torch.from_numpy(zombie_grid).flatten()
+            health_grid[int(i.y), int(i.x)] = i.hit_points
+        return torch.from_numpy(zombie_grid).flatten(), torch.from_numpy(np.concatenate((zombie_grid, health_grid))).flatten()
 
     def get_state_old(self):
         if self.just_starting() or self.done:

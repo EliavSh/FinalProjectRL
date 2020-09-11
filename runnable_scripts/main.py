@@ -81,8 +81,8 @@ def main(board_size):
     optimizer_zombie = optim.Adam(params=policy_net_zombie.parameters(), lr=lr)
 
     agent_light = LightMaster(strategy, em.num_actions_available()[0], device)
-    policy_net_light = DQN(em.get_screen_height(), em.get_screen_width(), env.action_space()[0]).to(device)
-    target_net_light = DQN(em.get_screen_height(), em.get_screen_width(), env.action_space()[0]).to(device)
+    policy_net_light = DQN(2 * em.get_screen_height(), em.get_screen_width(), env.action_space()[0]).to(device)
+    target_net_light = DQN(2 * em.get_screen_height(), em.get_screen_width(), env.action_space()[0]).to(device)
     memory_light = ReplayMemory(memory_size)
     target_net_light.load_state_dict(policy_net_light.state_dict())
     target_net_light.eval()
@@ -94,13 +94,13 @@ def main(board_size):
 
     for episode in range(num_episodes + num_test_episodes):
         em.reset()
-        state = em.get_state()
+        state_zombie, state_light = em.get_state()
         zombie_master_reward = 0
         # plt.figure() ;plt.imshow(state.squeeze(0).permute(1, 2, 0).cpu(), interpolation='none'); plt.title('Processed screen example'); plt.show()
         episode_start_time = time.time()
         for time_step in count():
-            action_zombie, rate = agent_zombie.select_action(state, policy_net_zombie)
-            action_light = agent_light.select_action(state, policy_net_light)
+            action_zombie, rate = agent_zombie.select_action(state_zombie, policy_net_zombie)
+            action_light = agent_light.select_action(state_light, policy_net_light)
 
             # update dict
             steps_dict_light['epsilon'].append(rate)
@@ -112,12 +112,12 @@ def main(board_size):
 
             reward = em.take_action(env.start_positions[action_zombie.numpy()], action_light.numpy())
             zombie_master_reward += reward
-            next_state = em.get_state()
+            next_state_zombie, next_state_light = em.get_state()
 
-            memory_zombie.push(Experience(state.unsqueeze(0), action_zombie, next_state.unsqueeze(0), reward))
-            memory_light.push(Experience(state.unsqueeze(0), action_light, next_state.unsqueeze(0), -reward))
+            memory_zombie.push(Experience(state_zombie.unsqueeze(0), action_zombie, next_state_zombie.unsqueeze(0), reward))
+            memory_light.push(Experience(state_light.unsqueeze(0), action_light, next_state_light.unsqueeze(0), -reward))
 
-            state = next_state
+            state_zombie, state_light = next_state_zombie, next_state_light
 
             if memory_light.can_provide_sample(batch_size):
                 experiences_zombie = memory_zombie.sample(batch_size)
