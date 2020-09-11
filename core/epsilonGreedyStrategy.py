@@ -2,11 +2,15 @@ import math
 
 
 class EpsilonGreedyStrategy:
-    def __init__(self, start, end, decay):
+    def __init__(self, start, end, decay, end_learning_step):
         self.start = start
         self.end = end
         self.decay = decay
+        self.end_learning_step = end_learning_step
 
     def get_exploration_rate(self, current_step):
-        return self.end + (self.start - self.end) * \
+        if current_step > self.end_learning_step:
+            return 0.01
+        else:
+            return self.end + (self.start - self.end) * \
                math.exp(-1. * current_step * self.decay)

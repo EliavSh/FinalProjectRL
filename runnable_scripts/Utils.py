@@ -73,41 +73,50 @@ def save_checkpoint(episode, target_net, policy_net, optimizer, loss, path):
 def rgb_generator(size):
     rgb_list = []
     for i in range(size):
-        rgb_list.append(tuple((np.random.uniform(0.2, 0.8), np.random.uniform(0.2, 0.8), np.random.uniform(0.2, 0.8), np.random.uniform(0.2, 0.8))))
+        rgb_list.append(tuple((np.random.uniform(0.2, 0.4), np.random.uniform(0.4, 0.6), np.random.uniform(0.6, 0.8), np.random.uniform(0.2, 0.8))))
     return rgb_list
 
 
-def eps_action_hist(dir_path, xlsx_name, resolution, STEPS_PER_EPISODE):
+def eps_action_hist(dir_path, xlsx_name, values_per_column, STEPS_PER_EPISODE):
     sheets = ['light_actions', 'zombie_actions']
     for sheet in sheets:
         # load and set up the data frame
         output = pd.read_excel(dir_path + xlsx_name, sheet_name=sheet)
 
         data = pd.DataFrame(
-            data=np.transpose(np.array([list(map(lambda x: x // resolution, np.array(list(output.index)))), np.array(output['action']), np.ones(len(output))])),
+            data=np.transpose(
+                np.array([list(map(lambda x: x // values_per_column, np.array(list(output.index)))), np.array(output['action']), np.ones(len(output))])),
             columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
-        rows = zip(data['step'] * resolution + resolution, data['action'], data['sum'])
+        rows = zip(data['step'] * values_per_column + values_per_column, data['action'], data['sum'])
         headers = ['step', 'action', 'sum']
         df = pd.DataFrame(rows, columns=headers)
 
         # define some properties: figsize, margins and colors
         fig, ax = plt.subplots(figsize=(12, 10))
         margin_bottom = np.zeros(len(df['step'].drop_duplicates()) - 1)
-        # colors = ["#006D2C", "#31A354", "#74C476"]  # TODO - change that to some general number of colors
+
         # build the bar plot
         actions = df['action'].drop_duplicates()
         colors = rgb_generator(len(actions))
 
         for num, action in enumerate(actions):
-            values = list(df[df['action'] == action].loc[:, 'sum'])
+            temp_df = df[df['action'] == action]
+            # fill any place without value with zeros (its Negligible)
+            for i in range(len(margin_bottom)):
+                if not temp_df['step'].values.__contains__(values_per_column * (i + 1)):
+                    temp_df = pd.concat(
+                        [temp_df.iloc[0:i, :], pd.DataFrame([values_per_column * (i + 1), action, 0], index=temp_df.columns.values).T, temp_df.iloc[i:, :]])
+
+            values = list(temp_df[temp_df['action'] == action].loc[:, 'sum'])
             mar_len = len(margin_bottom)  # length of margins, sometimes exceeds 10 - it's about not relevant residuals
-            df[df['action'] == action].iloc[0:mar_len, :].plot.bar(x='step', y='sum', ax=ax, stacked=True, bottom=margin_bottom, color=colors[num], label=num)
+            temp_df.iloc[0:mar_len, :].plot.bar(x='step', y='sum', ax=ax, stacked=True, bottom=margin_bottom, color=colors[num], label=num)
             margin_bottom += values[0:mar_len]
 
         # plt.show()
         # set the x-ticks as the episode value and other plot wrappers
         ax.set_xticklabels(
-            list(range(int(resolution // STEPS_PER_EPISODE), int(1 + 10 * resolution // STEPS_PER_EPISODE), int(resolution // STEPS_PER_EPISODE) or 1)),
+            list(range(int(values_per_column // STEPS_PER_EPISODE), int(1 + 10 * values_per_column // STEPS_PER_EPISODE),
+                       int(values_per_column // STEPS_PER_EPISODE) or 1)),
             rotation=30)
         plt.xlabel('Episode', fontsize=14)
         plt.ylabel('Steps', fontsize=14)
@@ -124,7 +133,7 @@ def save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, o
                     dir + '/zombie.pth')
     save_checkpoint(episode, target_net_light, policy_net_light, optimizer_light, 0,
                     dir + '/light.pth')
-    fig = plot(is_ipython, episodes_dict['episode_rewards'], 20)
+    fig = plot(is_ipython, episodes_dict['episode_rewards'], 10)
     plt.savefig(dir + '/reward.png', bbox_inches='tight')
     plt.close(fig)
     df = pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']})
@@ -132,8 +141,8 @@ def save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, o
 
 
 if __name__ == '__main__':
-    dir_path = 'C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/results/08_08_2020_at_01_06'
-    xlsx_name = '/results_08_08_2020_04_41.xlsx'
+    dir_path = 'C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/results/23_08_2020_at_08_18'
+    xlsx_name = '/results_23_08_2020_13_13.xlsx'
     resolution = 20000
     STEPS_PER_EPISODE = 200
     eps_action_hist(dir_path, xlsx_name, resolution, STEPS_PER_EPISODE)

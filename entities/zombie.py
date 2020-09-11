@@ -1,7 +1,7 @@
 import numpy as np
 from environment import env
 
-HEAL_EPSILON = 0.05
+HEAL_EPSILON = 0.01
 
 
 class Zombie:
@@ -24,7 +24,7 @@ class Zombie:
         self.y = state / self.env.grid.get_width()  # every zombie starts in an arbitrary positions by some distribution
         self.v_y = self.velocity * np.sin(self.angle)
         self.current_state = state
-        self.history = [(self.env.current_time, self.current_state)]  # tuples of (timestamp, pos)
+        self.history = [(self.env.current_time, int(self.current_state[0]))]  # tuples of (timestamp, pos)
         self.heal_epsilon = HEAL_EPSILON
         self.just_born = True
 
@@ -46,16 +46,16 @@ class Zombie:
         3. append history
         """
         if self.just_born:
-            # if the zombie just born, don't punish him, wait until the next turn to avoid double punishment
+            # if the zombie just born, don't punish him, wait until the next turn to avoid double punishment # TODO - checking if it is necessary
+            # new idea: if the zombie just born, punish him without moving him forward
             self.just_born = False
         else:
-            # hit/heal the zombie
-            self.update_hit_points(light_action)
-
-            # next step
+            # next step, move forward and punish
             self.x += self.v_x * self.env.dt
             self.y += self.v_y * self.env.dt
-            self.current_state = self.x + self.y
+            self.current_state = self.x + self.y * self.env.grid.get_height()
+        # hit/heal the zombie
+        self.update_hit_points(light_action)
 
         # append history
-        self.history.append((self.env.current_time, self.current_state))
+        self.history.append((self.env.current_time, int(self.current_state[0])))

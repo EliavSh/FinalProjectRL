@@ -13,7 +13,6 @@ DISPLAY_HEIGHT = 800
 MAX_ANGLE = 0  # np.arctan(self.grid.get_height()/(2*self.grid.get_width())) in case of 800 and 1600, arctan(1/4) = 0.24497866312686414
 MAX_VELOCITY = 1  # (float)
 DT = 1  # (int)
-LIGHT_SIZE = 1
 MAX_HIT_POINTS = 1
 
 
@@ -25,14 +24,14 @@ def calculate_start_positions(grid):
 
 class Env:
 
-    def __init__(self, grid: gameGrid, steps_per_episodes):
+    def __init__(self, grid: gameGrid, steps_per_episodes, light_size):
         pygame.init()
         pygame.display.set_caption('pickleking')
         self.steps_per_episodes = steps_per_episodes
         self.max_hit_points = MAX_HIT_POINTS
         self.display_width = DISPLAY_WIDTH
         self.display_height = DISPLAY_HEIGHT
-        self.light_size = LIGHT_SIZE
+        self.light_size = light_size
         self.game_display = pygame.display.set_mode((self.display_width, self.display_height))
         self.clock = pygame.time.Clock()
         self.grid = grid
@@ -80,7 +79,10 @@ class Env:
                 whether it's time to reset the environment again.
         """
         self.current_time += 1
+        # add new zombie
         self.add_zombie(zombie_action)
+        # update display
+        self.update(light_action)
         # damaged_zombies = 0  # for debugging
         reward = 0
         temp_alive_zombies = list(
@@ -96,8 +98,6 @@ class Env:
             # elif z.hit_points > temp_hit_points: damaged_zombies += 1
         self.alive_zombies = temp_alive_zombies
         # print(damaged_zombies)
-        # update display
-        self.update(light_action)
         return self.get_pygame_window(), reward, self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
 
     def keep_alive(self, h):
@@ -108,8 +108,12 @@ class Env:
             the idea is: if the hit points is close to 3 then the result is close to 1 ->
              -> there is small chance for keeping him alive and therefor rewarding the zombie with positive reward
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
+            in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
-            return np.sin(np.pi * h / 6) < random.random()
+            a = 1
+            if h != 1:
+                a = np.power(self.max_hit_points, -1 / 5)
+            return a * np.power(h, 1 / 5) < random.random()
 
     def get_pygame_window(self):
         return pygame.surfarray.array3d(pygame.display.get_surface())

@@ -33,10 +33,10 @@ import cProfile
 import os
 
 
-def main():
-    os.environ["SDL_VIDEODRIVER"] = "dummy"
+def main(board_size):
+    # os.environ["SDL_VIDEODRIVER"] = "dummy"
     dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
-                       time.strftime('%d_%m_%Y') + "_at_" + time.strftime('%H_%M'))
+                       time.strftime('%Y_%m_%d') + "_at_" + time.strftime('%H_%M'))
     create_dir(dir)
 
     # set seed
@@ -44,19 +44,23 @@ def main():
     random.seed(679)
 
     # top parameters
+    light_size = 3
+    width = board_size
+    height = board_size
     target_update = 10
-    num_episodes = 11
-    STEPS_PER_EPISODE = 200
-    CHECKPOINT = 100
-    resolution = num_episodes * STEPS_PER_EPISODE / 10
+    num_episodes = 90
+    num_test_episodes = 10  # the amount of episodes with zero epsilon - only smart moves
+    STEPS_PER_EPISODE = 100
+    CHECKPOINT = 10
+    values_per_column = (num_episodes + num_test_episodes) * STEPS_PER_EPISODE / 10
 
     # learning parameters
-    batch_size = 256
+    batch_size = 64
     gamma = 0.999
     eps_start = 1
     eps_end = 0.05
     eps_decay = 2 / (num_episodes * STEPS_PER_EPISODE)
-    memory_size = 1000
+    memory_size = 500
     lr = 0.001
 
     is_ipython = 'inline' in matplotlib.get_backend()
@@ -64,9 +68,9 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    env = Env(GameGrid(3, 3), STEPS_PER_EPISODE)
+    env = Env(GameGrid(height=height, width=width), STEPS_PER_EPISODE, light_size=light_size)
     em = EnvManager(env, device)
-    strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay)
+    strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay, num_episodes * STEPS_PER_EPISODE)
 
     agent_zombie = ZombieMaster(strategy, em.num_actions_available()[1], device)
     policy_net_zombie = DQN(em.get_screen_height(), em.get_screen_width(), env.action_space()[1]).to(device)
@@ -88,7 +92,7 @@ def main():
     steps_dict_light = {'epsilon': [], 'action': [], 'step': []}
     steps_dict_zombie = {'epsilon': [], 'action': [], 'step': []}
 
-    for episode in range(num_episodes):
+    for episode in range(num_episodes + num_test_episodes):
         em.reset()
         state = em.get_state()
         zombie_master_reward = 0
@@ -156,27 +160,29 @@ def main():
             save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
                              target_net_zombie)
 
-    save_check_point(dir, num_episodes, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
+    save_check_point(dir, num_episodes + num_test_episodes, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
                      target_net_zombie)
     results_file_name = '/results_' + time.strftime('%d_%m_%Y_%H_%M')
     writer = pd.ExcelWriter(dir + results_file_name + '.xlsx')
     pd.DataFrame(np.transpose(np.array(list(steps_dict_light.values()))), columns=list(steps_dict_light.keys())).set_index('step').to_excel(writer,
-                                                                                                                                sheet_name='light_actions')
+                                                                                                                                            sheet_name='light_actions')
     pd.DataFrame(np.transpose(np.array(list(steps_dict_zombie.values()))), columns=list(steps_dict_zombie.keys())).set_index('step').to_excel(writer,
-                                                                                                                                sheet_name='zombie_actions')
-    pd.DataFrame({'info': [target_update, num_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end, eps_decay, memory_size, lr,
-                           target_net_zombie.__str__()]},
+                                                                                                                                              sheet_name='zombie_actions')
+    pd.DataFrame({'info': [target_update, num_episodes + num_test_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end, eps_decay, memory_size, lr,
+                           light_size, target_net_zombie.__str__(), target_net_light.__str__()]},
                  index=['target_update', 'num_episodes', 'STEPS_PER_EPISODE', 'CHECKPOINT', 'batch_size', 'gamma', 'eps_start', 'eps_end', 'eps_decay',
-                        'memory_size', 'lr', 'target_net_zombie']).to_excel(writer, sheet_name='info')
+                        'memory_size', 'lr', 'light_size', 'target_net_zombie', 'target_net_light']).to_excel(writer, sheet_name='info')
     pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
         writer, sheet_name='rewards summary')
     writer.save()
-    eps_action_hist(dir, results_file_name + '.xlsx', resolution, STEPS_PER_EPISODE)
+    eps_action_hist(dir, results_file_name + '.xlsx', values_per_column, STEPS_PER_EPISODE)
     print('eliav king')
 
 
 if __name__ == '__main__':
-    main()
+    for i in list(range(5, 41, 5)):
+        main(i)
+
     # cProfile.run('main()')
 
     """
@@ -185,4 +191,16 @@ if __name__ == '__main__':
 
     with PyCallGraph(output=GraphvizOutput()):
         cProfile.run('main()')
+        
+    plot the keep_alive functions:
+        plot.plot(x,np.sin(np.pi*x/2),x,np.power(x,1/2),x,np.power(x,1/3),x,np.power(x,1/4),x,np.power(x,1/5))
+        plot.plot(np.transpose([0.38]*100), np.linspace(0,1,100))
+        plot.xlim((0,1))
+        plot.ylim((0,1))
+        plot.legend(['sin(x*pi/2)', 'x^(1/2)', 'x^(1/3)', 'x^(1/4)', 'x^(1/5)', 'x=0.9^9'], prop={'size': 30})
+        
+    plot replay memory rewards:
+        import matplotlib.pyplot as plt
+        plt.plot([exp.reward.numpy()[0] for exp in memory_light.memory])
+        plt.show()        
     """
