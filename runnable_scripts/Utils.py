@@ -4,16 +4,10 @@ import torch
 import numpy as np
 import pandas as pd
 from IPython import display
-import matplotlib.pyplot as plt
-from matplotlib import pyplot as plt
-from matplotlib import ticker
 from numpy.random import RandomState
 import seaborn as sns
-import pandas as pd
-import numpy as np
-from sklearn.neighbors import KernelDensity
-
-import matplotlib as mpl
+from matplotlib.transforms import Affine2D
+import mpl_toolkits.axisartist.floating_axes as floating_axes
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid_spec
 
@@ -133,7 +127,7 @@ def eps_action_hist(dir_path, xlsx_name, values_per_column, STEPS_PER_EPISODE):
         plt.tight_layout()
 
         plt.savefig(dir_path + '\\' + sheet + '_hist.png')
-        print('eliav king')
+    print('finished plotting action hist')
 
 
 def save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
@@ -149,16 +143,27 @@ def save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, o
     df.to_csv(dir + '/log.csv')
 
 
-def ridge_plot(dir_path, xlsx_name, values_per_column):
+def ridge_plot(dir_path, xlsx_name):
     sheets = ['light_actions', 'zombie_actions']
     x_start = 1
     y_start = 0
+    figs = []
 
     for sheet in sheets:
+        rewards = pd.read_csv(dir_path + '\\log.csv', index_col=0)
+        num_episodes = rewards.shape[0]
+        if sheet == 'light_actions':
+            rewards['reward'] = [x * -1 for x in rewards['reward']]
+        number_of_graphs = 10
+        episodes_per_graph = int(num_episodes / number_of_graphs)
+        rewards_min = np.min(rewards['reward'])
+        rewards_max = np.max(rewards['reward'])
+
         df = pd.read_excel(dir_path + xlsx_name, sheet_name=sheet)
+        steps_per_range_of_episodes = df.shape[0] / number_of_graphs
         data = pd.DataFrame(
             data=np.transpose(
-                np.array([list(map(lambda x: x // values_per_column, np.array(list(df.index)))), np.array(df['action']), np.ones(len(df))])),
+                np.array([list(map(lambda x: x // steps_per_range_of_episodes, np.array(list(df.index)))), np.array(df['action']), np.ones(len(df))])),
             columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
 
         j = 1
@@ -183,8 +188,9 @@ def ridge_plot(dir_path, xlsx_name, values_per_column):
         steps = [x for x in np.unique(data.step)]
         colors = rgb_generator(len(steps))
 
-        gs = grid_spec.GridSpec(len(steps), 1)  # chagne to 4 columns
+        gs = grid_spec.GridSpec(len(steps), 5)
         fig = plt.figure(figsize=(16, 9))
+        figs.append(fig)
         sns.set_style("dark")
 
         ax_objs = []
@@ -194,18 +200,27 @@ def ridge_plot(dir_path, xlsx_name, values_per_column):
             x_d = np.linspace(0, len(x), len(x))
 
             # creating new axes object
-            ax_objs.append(fig.add_subplot(gs[i:i + 1, 0:]))  # change to 0:-1, the last column should contain candles
+            ax_objs.append(fig.add_subplot(gs[i:(i + 1), -1]))  # candle plot
+            ax_objs.append(fig.add_subplot(gs[i:(i + 1), 0:-1]))  # ridge plot
 
             # plotting the distribution
+            quote = rewards['reward'][i * episodes_per_graph:((i + 1) * episodes_per_graph)]
+            ax_objs[-2].boxplot(quote, vert=False, showfliers=False)
+
             ax_objs[-1].plot(x_d, x, color="#f0f0f0", lw=1)
             ax_objs[-1].fill_between(x_d, x, alpha=1, color=colors[i])
 
             # setting uniform x and y lims
+            ax_objs[-2].set_xlim(rewards_min, rewards_max)
+            ax_objs[-2].set_ylim(0.85, 1.3)
+
             ax_objs[-1].set_xlim(x_start, len(x))
             ax_objs[-1].set_ylim(y_start, np.max(data['sum']))
 
             # make background transparent
             rect = ax_objs[-1].patch
+            rect.set_alpha(0)
+            rect = ax_objs[-2].patch
             rect.set_alpha(0)
 
             # remove borders, axis ticks, and labels
@@ -214,33 +229,39 @@ def ridge_plot(dir_path, xlsx_name, values_per_column):
             if i == len(steps) - 1:
                 ax_objs[-1].set_xlabel("Actions", fontsize=16, fontweight="bold")
                 plt.setp(plt.gcf().get_axes(), yticks=[])
+                ax_objs[-2].set_xlabel("Rewards", fontsize=16, fontweight="bold")
+                plt.setp(plt.gcf().get_axes(), yticks=[])
             else:
                 ax_objs[-1].set_xticklabels([])
                 ax_objs[-1].axis("off")
+                ax_objs[-2].set_xticklabels([])
+                ax_objs[-2].axis("off")
 
             spines = ["top", "right", "left", "bottom"]
             for s in spines:
+                ax_objs[-2].spines[s].set_visible(False)
                 ax_objs[-1].spines[s].set_visible(False)
 
             if i == len(steps) - 1:
-                ax_objs[-1].text(x_start - 0.02, y_start, 'Test Episodes: \n\n' + str(int(step * 100)) + ' - ' + str(int(step * 100 + 100)), fontweight="bold",
-                                 fontsize=14, ha="right")
+                ax_objs[-1].text(x_start - 0.2, y_start,
+                                 'Test Episodes: \n\n' + str(int(step * episodes_per_graph)) + ' - ' + str(
+                                     int(step * episodes_per_graph + episodes_per_graph) - 1), fontweight="bold", fontsize=14, ha="right")
             elif i == 0:
-                ax_objs[-1].text(x_start - 0.02, y_start, 'Episodes: \n\n' + str(int(step * 100)) + ' - ' + str(int(step * 100 + 100)) + '\n',
-                                 fontweight="bold", fontsize=14, ha="right")
+                ax_objs[-1].text(x_start - 0.2, y_start, 'Episodes: \n\n' + str(int(step * episodes_per_graph)) + ' - ' + str(
+                    int(step * episodes_per_graph + episodes_per_graph) - 1), fontweight="bold", fontsize=14, ha="right")
             else:
-                ax_objs[-1].text(x_start - 0.02, y_start, str(int(step * 100)) + ' - ' + str(int(step * 100 + 100)) + '\n', fontweight="bold", fontsize=14,
-                                 ha="right")
-            # note: the ax.figbox is the figure box object with "min" attribute that stores the x's start,end values. We are interested in the first (start)
-            ## ax_objs[-1].figbox.min[0]
+                ax_objs[-1].text(x_start - 0.2, y_start,
+                                 str(int(step * episodes_per_graph)) + ' - ' + str(int(step * episodes_per_graph + episodes_per_graph) - 1),
+                                 fontweight="bold", fontsize=14, ha="right")
 
-        gs.update(hspace=-0.4)
+        gs.update(hspace=-0.0)
 
-        fig.text(0.18, 0.88, "Actions distribution along different ranges of episodes", fontsize=30)
+        plt.tight_layout(rect=(0, 0, 1, 0.9))
+        fig.text(0.13, 0.91, "Actions and rewards distribution along different ranges of episodes", fontsize=30)
 
         plt.savefig(dir_path + '\\' + sheet + '_ridge_plot.png', bbox_inches="tight")
 
-        print('eliav king')
+    print('finished plotting action-reward ridge-box plots')
 
 
 if __name__ == '__main__':
@@ -252,9 +273,10 @@ if __name__ == '__main__':
         STEPS_PER_EPISODE = 200
         eps_action_hist(dir_path, xlsx_name, resolution, STEPS_PER_EPISODE)
     elif temp == 2:
-        dir_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)) + '\\results\\fixed_light_size_3_range_of_board_5_40\\2020_09_15_at_08_14'
-        xlsx_name = '\\results_15_09_2020_10_50.xlsx'
-        ridge_plot(dir_path=dir_path, xlsx_name=xlsx_name, values_per_column=10700)
+        dir_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), os.pardir)) + '\\results\\fixed_light_size_3_range_of_board_5_40\\2020_09_15_at_19_36'
+        xlsx_name = '\\results_15_09_2020_22_54.xlsx'
+        ridge_plot(dir_path=dir_path, xlsx_name=xlsx_name)
 
     print('eliav king')
 
@@ -267,4 +289,11 @@ plt.ylabel('Epsilon', fontsize=14)
 plt.title('Epsilon decrease over simulation steps')
 plt.show()
 plt.savefig(dir_path + '\\epsilon_graph.png')
+
+
+from matplotlib.transforms import Bbox, TransformedBbox, BboxTransformTo
+
+fig.axes[0].bbox = TransformedBbox(Bbox([[0.7663793103448276, 0.8147457627118644],[0.900001, 0.88]]), BboxTransformTo(
+    TransformedBbox(Bbox([[0.0, 0.0], [16.0, 9.0]]), Affine2D([[0, 100., 0.], [100., 0., 0.], [0., 0., 1.]]))))
+
 """

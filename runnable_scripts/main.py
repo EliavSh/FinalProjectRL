@@ -7,7 +7,7 @@ import random
 import matplotlib
 from itertools import count
 import pandas as pd
-
+import math
 from environment.gameGrid import GameGrid
 from environment.env import Env
 from environment.envManager import EnvManager
@@ -33,7 +33,7 @@ import cProfile
 import os
 
 
-def main(board_size):
+def main(board_size, light_size):
     os.environ["SDL_VIDEODRIVER"] = "dummy"
     dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
                        time.strftime('%Y_%m_%d') + "_at_" + time.strftime('%H_%M'))
@@ -44,24 +44,24 @@ def main(board_size):
     random.seed(679)
 
     # top parameters
-    light_size = 3
     width = board_size
     height = board_size
-    target_update = 10
-    num_episodes = 900
-    num_test_episodes = 100  # the amount of episodes with zero epsilon - only smart moves
+    num_episodes = 180
+    num_test_episodes = 20  # the amount of episodes with zero epsilon - only smart moves
     ZOMBIES_PER_EPISODE = 100
     STEPS_PER_EPISODE = ZOMBIES_PER_EPISODE + width + 1
-    CHECKPOINT = 100
-    values_per_column = (num_episodes + num_test_episodes) * (1 + STEPS_PER_EPISODE) / 10
+    total_steps = (num_episodes + num_test_episodes) * (1 + STEPS_PER_EPISODE)
+    CHECKPOINT = num_test_episodes
+    target_update = math.ceil(total_steps / 1000)  # TODO - update in docs that we are now updating per-steps and not per-episodes
+    values_per_column = total_steps / 10
 
     # learning parameters
-    batch_size = 100
+    batch_size = 64
     gamma = 0.999
     eps_start = 1
     eps_end = 0.05
     eps_decay = 2 / (num_episodes * STEPS_PER_EPISODE)
-    memory_size = 2000
+    memory_size = 1000
     lr = 0.001
 
     is_ipython = 'inline' in matplotlib.get_backend()
@@ -100,7 +100,7 @@ def main(board_size):
         # plt.figure() ;plt.imshow(state.squeeze(0).permute(1, 2, 0).cpu(), interpolation='none'); plt.title('Processed screen example'); plt.show()
         episode_start_time = time.time()
         for time_step in count():
-            action_zombie, rate = agent_zombie.select_action(state_zombie, policy_net_zombie)
+            action_zombie, rate, current_step = agent_zombie.select_action(state_zombie, policy_net_zombie)
             action_light = agent_light.select_action(state_light, policy_net_light)
 
             # update dict
@@ -120,7 +120,7 @@ def main(board_size):
 
             state_zombie, state_light = next_state_zombie, next_state_light
 
-            if memory_light.can_provide_sample(batch_size):
+            if memory_light.can_provide_sample(batch_size) and time_step > width:  # start learning when batch is large enough and the first zombie finished
                 experiences_zombie = memory_zombie.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_zombie)
 
@@ -152,10 +152,10 @@ def main(board_size):
                 episodes_dict['episode_durations'].append(time.time() - episode_start_time)
                 break
 
-        if episode % target_update == 0:
-            # update the target net to the same model dict as the policy net
-            target_net_light.load_state_dict(policy_net_light.state_dict())
-            target_net_zombie.load_state_dict(policy_net_zombie.state_dict())
+            if current_step % target_update == 0:
+                # update the target net to the same model dict as the policy net
+                target_net_light.load_state_dict(policy_net_light.state_dict())
+                target_net_zombie.load_state_dict(policy_net_zombie.state_dict())
 
         if episode % CHECKPOINT == 0:
             save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
@@ -177,14 +177,17 @@ def main(board_size):
     pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
         writer, sheet_name='rewards summary')
     writer.save()
+
     eps_action_hist(dir, results_file_name + '.xlsx', values_per_column, STEPS_PER_EPISODE)
-    ridge_plot(dir, results_file_name + '.xlsx', values_per_column)
+    ridge_plot(dir, results_file_name + '.xlsx')
+
     print('eliav king')
 
 
 if __name__ == '__main__':
-    for i in list(range(5, 41, 5)):
-        main(i)
+    for i in list(range(100, 1001, 100)):
+        for j in list(range(5, 50, 11)):
+            main(i, j)
 
     # cProfile.run('main()')
 

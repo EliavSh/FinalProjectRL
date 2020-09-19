@@ -4,7 +4,7 @@ import numpy as np
 class GameGrid:
     def __init__(self, height, width):
         """
-        setting values_per_column - the only place with setting access
+        setting height and width of the game board - the only place with setting access
         :param height: int
         :param width: int
         """

@@ -19,10 +19,10 @@ class ZombieMaster:
         random_number = random.random()
         if rate > random_number:
             action = random.randrange(self.num_actions)
-            return torch.tensor([action]).to(self.device), rate  # explore
+            return torch.tensor([action]).to(self.device), rate, self.current_step  # explore
         else:
             with torch.no_grad():
                 # here we are getting the action from one pass along the network. after that we:
                 # convert the tensor to data, then move to cpu using then converting to numpy and lastly, wraping back to tensor
                 action = torch.tensor([policy_net(state).argmax(dim=0).data.cpu().numpy()[0]]).to(self.device)  # max over rows! (dim=0)
-                return action, rate
+                return action, rate, self.current_step
