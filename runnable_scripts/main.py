@@ -18,7 +18,7 @@ from core.replayMemory import ReplayMemory
 from core.DQN import DQN
 from core.experience import Experience
 from core.qValues import QValues
-from runnable_scripts.Utils import extract_tensors, create_dir, eps_action_hist, save_check_point
+from runnable_scripts.Utils import extract_tensors, create_dir, eps_action_hist, save_check_point, ridge_plot
 
 """
 # create env_manager
@@ -34,7 +34,7 @@ import os
 
 
 def main(board_size):
-    # os.environ["SDL_VIDEODRIVER"] = "dummy"
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
     dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
                        time.strftime('%Y_%m_%d') + "_at_" + time.strftime('%H_%M'))
     create_dir(dir)
@@ -48,19 +48,20 @@ def main(board_size):
     width = board_size
     height = board_size
     target_update = 10
-    num_episodes = 90
-    num_test_episodes = 10  # the amount of episodes with zero epsilon - only smart moves
-    STEPS_PER_EPISODE = 100
-    CHECKPOINT = 10
-    values_per_column = (num_episodes + num_test_episodes) * STEPS_PER_EPISODE / 10
+    num_episodes = 900
+    num_test_episodes = 100  # the amount of episodes with zero epsilon - only smart moves
+    ZOMBIES_PER_EPISODE = 100
+    STEPS_PER_EPISODE = ZOMBIES_PER_EPISODE + width + 1
+    CHECKPOINT = 100
+    values_per_column = (num_episodes + num_test_episodes) * (1 + STEPS_PER_EPISODE) / 10
 
     # learning parameters
-    batch_size = 64
+    batch_size = 100
     gamma = 0.999
     eps_start = 1
     eps_end = 0.05
     eps_decay = 2 / (num_episodes * STEPS_PER_EPISODE)
-    memory_size = 500
+    memory_size = 2000
     lr = 0.001
 
     is_ipython = 'inline' in matplotlib.get_backend()
@@ -158,17 +159,18 @@ def main(board_size):
 
         if episode % CHECKPOINT == 0:
             save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
-                             target_net_zombie)
+                             target_net_zombie, CHECKPOINT)
 
-    save_check_point(dir, num_episodes + num_test_episodes, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
-                     target_net_zombie)
+    save_check_point(dir, num_episodes + num_test_episodes, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie,
+                     target_net_light, target_net_zombie, CHECKPOINT)
     results_file_name = '/results_' + time.strftime('%d_%m_%Y_%H_%M')
     writer = pd.ExcelWriter(dir + results_file_name + '.xlsx')
     pd.DataFrame(np.transpose(np.array(list(steps_dict_light.values()))), columns=list(steps_dict_light.keys())).set_index('step').to_excel(writer,
                                                                                                                                             sheet_name='light_actions')
     pd.DataFrame(np.transpose(np.array(list(steps_dict_zombie.values()))), columns=list(steps_dict_zombie.keys())).set_index('step').to_excel(writer,
                                                                                                                                               sheet_name='zombie_actions')
-    pd.DataFrame({'info': [target_update, num_episodes + num_test_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end, eps_decay, memory_size, lr,
+    pd.DataFrame({'info': [target_update, num_episodes + num_test_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end, eps_decay,
+                           memory_size, lr,
                            light_size, target_net_zombie.__str__(), target_net_light.__str__()]},
                  index=['target_update', 'num_episodes', 'STEPS_PER_EPISODE', 'CHECKPOINT', 'batch_size', 'gamma', 'eps_start', 'eps_end', 'eps_decay',
                         'memory_size', 'lr', 'light_size', 'target_net_zombie', 'target_net_light']).to_excel(writer, sheet_name='info')
@@ -176,6 +178,7 @@ def main(board_size):
         writer, sheet_name='rewards summary')
     writer.save()
     eps_action_hist(dir, results_file_name + '.xlsx', values_per_column, STEPS_PER_EPISODE)
+    ridge_plot(dir, results_file_name + '.xlsx', values_per_column)
     print('eliav king')
 
 

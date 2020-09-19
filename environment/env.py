@@ -110,10 +110,7 @@ class Env:
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
-            a = 1
-            if h != 1:
-                a = np.power(self.max_hit_points, -1 / 5)
-            return a * np.power(h, 1 / 5) < random.random()
+            return np.power(h / self.max_hit_points, 1 / 5) < random.random()
 
     def get_pygame_window(self):
         return pygame.surfarray.array3d(pygame.display.get_surface())
