@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import random
 import matplotlib
+import matplotlib.pyplot as plt
 from itertools import count
 import pandas as pd
 import math
@@ -34,6 +35,7 @@ import os
 
 
 def main(board_size, light_size):
+    plt.style.use('dark_background')
     os.environ["SDL_VIDEODRIVER"] = "dummy"
     dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
                        time.strftime('%Y_%m_%d') + "_at_" + time.strftime('%H_%M'))
@@ -46,22 +48,21 @@ def main(board_size, light_size):
     # top parameters
     width = board_size
     height = board_size
-    num_episodes = 180
-    num_test_episodes = 20  # the amount of episodes with zero epsilon - only smart moves
+    num_episodes = 800
+    num_test_episodes = 200  # the amount of episodes with zero epsilon - only smart moves
     ZOMBIES_PER_EPISODE = 100
-    STEPS_PER_EPISODE = ZOMBIES_PER_EPISODE + width + 1
-    total_steps = (num_episodes + num_test_episodes) * (1 + STEPS_PER_EPISODE)
-    CHECKPOINT = num_test_episodes
-    target_update = math.ceil(total_steps / 1000)  # TODO - update in docs that we are now updating per-steps and not per-episodes
+    STEPS_PER_EPISODE = ZOMBIES_PER_EPISODE + width + 2
+    total_steps = (num_episodes + num_test_episodes) * STEPS_PER_EPISODE
+    CHECKPOINT = int((num_episodes + num_test_episodes) / 10)
+    target_update = 1000  # TODO - update in docs that we are now updating per-steps and not per-episodes # about one forth of the memory size
     values_per_column = total_steps / 10
 
     # learning parameters
     batch_size = 64
     gamma = 0.999
     eps_start = 1
-    eps_end = 0.05
-    eps_decay = 2 / (num_episodes * STEPS_PER_EPISODE)
-    memory_size = 1000
+    eps_end = math.exp(-5)
+    memory_size = 5000
     lr = 0.001
 
     is_ipython = 'inline' in matplotlib.get_backend()
@@ -71,19 +72,19 @@ def main(board_size, light_size):
 
     env = Env(GameGrid(height=height, width=width), STEPS_PER_EPISODE, light_size=light_size)
     em = EnvManager(env, device)
-    strategy = EpsilonGreedyStrategy(eps_start, eps_end, eps_decay, num_episodes * STEPS_PER_EPISODE)
+    strategy = EpsilonGreedyStrategy(eps_start, eps_end, num_episodes * STEPS_PER_EPISODE)
 
     agent_zombie = ZombieMaster(strategy, em.num_actions_available()[1], device)
-    policy_net_zombie = DQN(em.get_screen_height(), em.get_screen_width(), env.action_space()[1]).to(device)
-    target_net_zombie = DQN(em.get_screen_height(), em.get_screen_width(), env.action_space()[1]).to(device)
+    policy_net_zombie = DQN(em.get_screen_height(), em.get_screen_width(), env.action_space()[1], em.get_screen_height() * em.get_screen_width() / 2).to(device)
+    target_net_zombie = DQN(em.get_screen_height(), em.get_screen_width(), env.action_space()[1], em.get_screen_height() * em.get_screen_width() / 2).to(device)
     memory_zombie = ReplayMemory(memory_size)
     target_net_zombie.load_state_dict(policy_net_zombie.state_dict())
     target_net_zombie.eval()
     optimizer_zombie = optim.Adam(params=policy_net_zombie.parameters(), lr=lr)
 
     agent_light = LightMaster(strategy, em.num_actions_available()[0], device)
-    policy_net_light = DQN(2 * em.get_screen_height(), em.get_screen_width(), env.action_space()[0]).to(device)
-    target_net_light = DQN(2 * em.get_screen_height(), em.get_screen_width(), env.action_space()[0]).to(device)
+    policy_net_light = DQN(2 * em.get_screen_height(), em.get_screen_width(), env.action_space()[0], em.get_screen_height() * em.get_screen_width()).to(device)
+    target_net_light = DQN(2 * em.get_screen_height(), em.get_screen_width(), env.action_space()[0], em.get_screen_height() * em.get_screen_width()).to(device)
     memory_light = ReplayMemory(memory_size)
     target_net_light.load_state_dict(policy_net_light.state_dict())
     target_net_light.eval()
@@ -97,7 +98,6 @@ def main(board_size, light_size):
         em.reset()
         state_zombie, state_light = em.get_state()
         zombie_master_reward = 0
-        # plt.figure() ;plt.imshow(state.squeeze(0).permute(1, 2, 0).cpu(), interpolation='none'); plt.title('Processed screen example'); plt.show()
         episode_start_time = time.time()
         for time_step in count():
             action_zombie, rate, current_step = agent_zombie.select_action(state_zombie, policy_net_zombie)
@@ -120,12 +120,13 @@ def main(board_size, light_size):
 
             state_zombie, state_light = next_state_zombie, next_state_light
 
-            if memory_light.can_provide_sample(batch_size) and time_step > width:  # start learning when batch is large enough and the first zombie finished
+            # 1. start learning when batch is large enough and the first zombie finished
+            # 2. learning ends when the test starts
+            if memory_light.can_provide_sample(batch_size):
+                # learn the zombie master
                 experiences_zombie = memory_zombie.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_zombie)
 
-                # In the mean time I'm trying to teach the light master alone (while the zombie master takes random actions)
-                # so, all this part is surrounded with block comment
                 current_q_values = QValues.get_current(policy_net_zombie, states, actions)
                 next_q_values = QValues.get_next(target_net_zombie, next_states, policy_net_zombie)
                 target_q_values = (next_q_values * gamma) + rewards
@@ -135,6 +136,7 @@ def main(board_size, light_size):
                 loss_zombie.backward()
                 optimizer_zombie.step()
 
+                # learn the light master
                 experiences_light = memory_light.sample(batch_size)
                 states, actions, rewards, next_states = extract_tensors(experiences_light)
 
@@ -169,25 +171,25 @@ def main(board_size, light_size):
                                                                                                                                             sheet_name='light_actions')
     pd.DataFrame(np.transpose(np.array(list(steps_dict_zombie.values()))), columns=list(steps_dict_zombie.keys())).set_index('step').to_excel(writer,
                                                                                                                                               sheet_name='zombie_actions')
-    pd.DataFrame({'info': [target_update, num_episodes + num_test_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end, eps_decay,
+    pd.DataFrame({'info': [target_update, num_episodes + num_test_episodes, STEPS_PER_EPISODE, CHECKPOINT, batch_size, gamma, eps_start, eps_end,
                            memory_size, lr,
                            light_size, target_net_zombie.__str__(), target_net_light.__str__()]},
-                 index=['target_update', 'num_episodes', 'STEPS_PER_EPISODE', 'CHECKPOINT', 'batch_size', 'gamma', 'eps_start', 'eps_end', 'eps_decay',
-                        'memory_size', 'lr', 'light_size', 'target_net_zombie', 'target_net_light']).to_excel(writer, sheet_name='info')
+                 index=['target_update', 'num_episodes', 'STEPS_PER_EPISODE', 'CHECKPOINT', 'batch_size', 'gamma', 'eps_start', 'eps_end', 'memory_size', 'lr',
+                        'light_size', 'target_net_zombie', 'target_net_light']).to_excel(writer, sheet_name='info')
     pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
         writer, sheet_name='rewards summary')
     writer.save()
 
-    eps_action_hist(dir, results_file_name + '.xlsx', values_per_column, STEPS_PER_EPISODE)
+    # eps_action_hist(dir, results_file_name + '.xlsx', values_per_column, STEPS_PER_EPISODE)
     ridge_plot(dir, results_file_name + '.xlsx')
 
     print('eliav king')
 
 
 if __name__ == '__main__':
-    for i in list(range(100, 1001, 100)):
-        for j in list(range(5, 50, 11)):
-            main(i, j)
+    for j in list(range(3, 4, 10)):
+        for i in list(range(5, 61, 5)):
+            main(board_size=i, light_size=j)
 
     # cProfile.run('main()')
 
