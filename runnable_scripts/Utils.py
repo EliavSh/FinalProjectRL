@@ -25,8 +25,8 @@ def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, 
                                                                                                                                               sheet_name='zombie_actions')
 
     config_main = get_config('MainInfo')
-    config_ddqn = get_config('MainInfo')
-    config_strategy = get_config('MainInfo')
+    config_ddqn = get_config('DdqnAgentInfo')
+    config_strategy = get_config('StrategyInfo')
 
     pd.DataFrame(
         {'info': [config_ddqn['target_update'], int(config_main['num_episodes']) + int(config_main['num_test_episodes']), config_main['zombies_per_episode'],
@@ -40,15 +40,16 @@ def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, 
     writer.save()
 
 
-def create_dir(dir):
-    if not os.path.exists(dir):
-        os.mkdir(dir)
+def create_dir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+    return path
 
 
-def get_config(config_topic):
+def get_config(config_topic, is_bool=False, bool_key=''):
     config_object = ConfigParser()
     config_object.read('C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/configs/config.ini')
-    return config_object[config_topic]
+    return config_object.getboolean(config_topic, bool_key) if is_bool else config_object[config_topic]
 
 
 def extract_tensors(experiences):
@@ -174,6 +175,7 @@ def save_check_point(dir, episode, episodes_dict, optimizer_light, optimizer_zom
 
 
 def plot_progress(path, episodes_dict, moving_average_period):
+    plt.style.use('dark_background')
     fig = plot(episodes_dict['episode_rewards'], moving_average_period)
     plt.savefig(path + '/reward.png', bbox_inches='tight')
     plt.close(fig)
@@ -373,5 +375,16 @@ from matplotlib.transforms import Bbox, TransformedBbox, BboxTransformTo
 
 fig.axes[0].bbox = TransformedBbox(Bbox([[0.7663793103448276, 0.8147457627118644],[0.900001, 0.88]]), BboxTransformTo(
     TransformedBbox(Bbox([[0.0, 0.0], [16.0, 9.0]]), Affine2D([[0, 100., 0.], [100., 0., 0.], [0., 0., 1.]]))))
+       
+plot the keep_alive functions:
+    plot.plot(x,np.sin(np.pi*x/2),x,np.power(x,1/2),x,np.power(x,1/3),x,np.power(x,1/4),x,np.power(x,1/5))
+    plot.plot(np.transpose([0.38]*100), np.linspace(0,1,100))
+    plot.xlim((0,1))
+    plot.ylim((0,1))
+    plot.legend(['sin(x*pi/2)', 'x^(1/2)', 'x^(1/3)', 'x^(1/4)', 'x^(1/5)', 'x=0.9^9'], prop={'size': 30})
 
+plot replay memory rewards:
+    import matplotlib.pyplot as plt
+    plt.plot([exp.reward.numpy()[0] for exp in memory_light.memory])
+    plt.show()        
 """

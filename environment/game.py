@@ -1,5 +1,5 @@
 import time
-
+import os
 import pygame
 import numpy as np
 from PIL import Image
@@ -39,12 +39,22 @@ def calculate_start_positions(grid):
 
 class Game:
 
-    def __init__(self, device, agent_zombie, agent_light):
+    def __init__(self, device, agent_zombie, agent_light, interactive_mode=False):
+        # set interactive mode
+        self.interactive_mode = interactive_mode
+        if interactive_mode:
+            pygame.init()
+            pygame.display.set_caption('pickleking')
+            self.display_width = DISPLAY_WIDTH
+            self.display_height = DISPLAY_HEIGHT
+            self.game_display = pygame.display.set_mode((self.display_width, self.display_height))
+            self.zombie_image, self.light_image, self.grid_image = self.set_up()
+            self.clock = pygame.time.Clock()
+        else:
+            os.environ["SDL_VIDEODRIVER"] = "dummy"
+        # set our agents
         self.agent_zombie = agent_zombie(device, 'zombie')
         self.agent_light = agent_light(device, 'light')
-
-        pygame.init()
-        pygame.display.set_caption('pickleking')
         # load main info
         main_info = get_config("MainInfo")
         self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2
@@ -53,13 +63,8 @@ class Game:
         self.total_episodes = int(main_info['num_episodes']) + int(main_info['num_test_episodes'])
         # other fields
         self.max_hit_points = MAX_HIT_POINTS
-        self.display_width = DISPLAY_WIDTH
-        self.display_height = DISPLAY_HEIGHT
-        self.game_display = pygame.display.set_mode((self.display_width, self.display_height))
-        self.clock = pygame.time.Clock()
         self.grid = GameGrid()
         self.start_positions = calculate_start_positions(self.grid)
-        self.zombie_image, self.light_image, self.grid_image = self.set_up()
         self.current_time = 0
         self.zombie_num = 0
         self.alive_zombies = []  # list of the currently alive zombies
@@ -67,7 +72,6 @@ class Game:
         self.max_angle = MAX_ANGLE
         self.max_velocity = MAX_VELOCITY
         self.dt = DT
-
         self.device = device
         self.current_screen = None
         self.done = False
@@ -79,7 +83,7 @@ class Game:
         self.all_zombies = []  # list of all zombies (from all time)
         self.current_screen = None
 
-    def play_game(self, path):
+    def play_zero_sum_game(self, path):
         episodes_dict = {'episode_rewards': [], 'episode_durations': []}
         steps_dict_light = {'epsilon': [], 'action': [], 'step': []}
         steps_dict_zombie = {'epsilon': [], 'action': [], 'step': []}
@@ -115,6 +119,7 @@ class Game:
                     episodes_dict['episode_durations'].append(time.time() - episode_start_time)
                     break
 
+            # plotting the moving average
             if episode % self.check_point == 0:
                 plot_progress(path, episodes_dict, self.check_point)
 
@@ -152,13 +157,13 @@ class Game:
         self.current_time += 1
         # add new zombie
         self.add_zombie(zombie_action)
-        # update display
-        self.update(light_action)
-        # damaged_zombies = 0  # for debugging
-        reward = 0
+        # update display in case of interactive mode
+        if self.interactive_mode:
+            self.update(light_action)
+
         # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
         temp_alive_zombies = list(np.copy(self.alive_zombies))
-
+        reward = 0
         for z in self.alive_zombies:
             z.move(light_action)
             if z.x >= self.grid.get_width():
