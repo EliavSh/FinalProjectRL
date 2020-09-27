@@ -1,5 +1,7 @@
 import os
 import time
+from configparser import ConfigParser
+
 import torch
 import numpy as np
 import pandas as pd
@@ -15,9 +17,38 @@ from matplotlib.patches import Patch
 from core.experience import Experience
 
 
+def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, episodes_dict):
+    writer = pd.ExcelWriter(path + results_file_name + '.xlsx')
+    pd.DataFrame(np.transpose(np.array(list(steps_dict_light.values()))), columns=list(steps_dict_light.keys())).set_index('step').to_excel(writer,
+                                                                                                                                            sheet_name='light_actions')
+    pd.DataFrame(np.transpose(np.array(list(steps_dict_zombie.values()))), columns=list(steps_dict_zombie.keys())).set_index('step').to_excel(writer,
+                                                                                                                                              sheet_name='zombie_actions')
+
+    config_main = get_config('MainInfo')
+    config_ddqn = get_config('MainInfo')
+    config_strategy = get_config('MainInfo')
+
+    pd.DataFrame(
+        {'info': [config_ddqn['target_update'], int(config_main['num_episodes']) + int(config_main['num_test_episodes']), config_main['zombies_per_episode'],
+                  config_main['check_point'], config_ddqn['batch_size'], config_ddqn['gamma'], config_strategy['eps_start'], config_strategy['eps_end'],
+                  config_ddqn['memory_size'], config_ddqn['lr'], config_main['light_size']]},
+        index=['target_update', 'total_episodes', 'zombies_per_episode', 'check_point', 'batch_size', 'gamma', 'eps_start', 'eps_end', 'memory_size', 'lr',
+               'light_size']).to_excel(writer, sheet_name='info')
+
+    pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
+        writer, sheet_name='rewards summary')
+    writer.save()
+
+
 def create_dir(dir):
     if not os.path.exists(dir):
         os.mkdir(dir)
+
+
+def get_config(config_topic):
+    config_object = ConfigParser()
+    config_object.read('C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/configs/config.ini')
+    return config_object[config_topic]
 
 
 def extract_tensors(experiences):
@@ -44,7 +75,7 @@ def get_moving_average(period, values):
         return moving_avg.numpy()
 
 
-def plot(is_ipython, values, moving_avg_period):
+def plot(values, moving_avg_period):
     # turn interactive mode off
     plt.ioff()
 
@@ -59,8 +90,6 @@ def plot(is_ipython, values, moving_avg_period):
     plt.plot(moving_avg)
     print("Episode", len(values), "\n",
           moving_avg_period, "episode moving avg:", moving_avg[-1])
-    if is_ipython:
-        display.clear_output(wait=True)
     return fig
 
 
@@ -131,17 +160,25 @@ def eps_action_hist(dir_path, xlsx_name, values_per_column, STEPS_PER_EPISODE):
     print('finished plotting action hist')
 
 
-def save_check_point(dir, episode, episodes_dict, is_ipython, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
+def save_check_point(dir, episode, episodes_dict, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
                      target_net_zombie, CHECKPOINT):
     save_checkpoint(episode, target_net_zombie, policy_net_zombie, optimizer_zombie, 0,
                     dir + '/zombie.pth')
     save_checkpoint(episode, target_net_light, policy_net_light, optimizer_light, 0,
                     dir + '/light.pth')
-    fig = plot(is_ipython, episodes_dict['episode_rewards'], CHECKPOINT)
+    fig = plot(episodes_dict['episode_rewards'], CHECKPOINT)
     plt.savefig(dir + '/reward.png', bbox_inches='tight')
     plt.close(fig)
     df = pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']})
     df.to_csv(dir + '/log.csv')
+
+
+def plot_progress(path, episodes_dict, moving_average_period):
+    fig = plot(episodes_dict['episode_rewards'], moving_average_period)
+    plt.savefig(path + '/reward.png', bbox_inches='tight')
+    plt.close(fig)
+    df = pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']})
+    df.to_csv(path + '/log.csv')
 
 
 def ridge_plot(dir_path, xlsx_name):

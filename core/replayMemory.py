@@ -1,9 +1,11 @@
 import random
+from runnable_scripts.Utils import get_config
 
 
 class ReplayMemory:
-    def __init__(self, capacity):
-        self.capacity = capacity
+    def __init__(self):
+        self.memory_info = get_config('DdqnAgentInfo')
+        self.capacity = int(self.memory_info['memory_size'])
         self.memory = []
         self.push_count = 0
 

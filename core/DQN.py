@@ -5,10 +5,10 @@ import torch
 
 class DQN(nn.Module):
 
-    def __init__(self, h, w, outputs, neurons_number):
+    def __init__(self, input_size, outputs, neurons_number):
         self.neurons_number = int(neurons_number)
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(in_features=h*w, out_features=self.neurons_number)
+        self.fc1 = nn.Linear(in_features=input_size, out_features=self.neurons_number)
         self.fc2 = nn.Linear(in_features=self.neurons_number, out_features=self.neurons_number)
         # self.fc3 = nn.Linear(in_features=self.neurons_number, out_features=self.neurons_number)
         self.fc4 = nn.Linear(in_features=self.neurons_number, out_features=outputs)

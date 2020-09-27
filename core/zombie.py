@@ -1,11 +1,11 @@
 import numpy as np
-from environment import env
+from environment import game
 
 HEAL_EPSILON = 0.01
 
 
 class Zombie:
-    def __init__(self, id, angle, velocity, state, env: env):
+    def __init__(self, id, angle, velocity, state, env: game):
         """
         :param id: int
         :param angle: float, radians

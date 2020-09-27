@@ -1,10 +1,25 @@
+import time
+
 import pygame
 import numpy as np
 from PIL import Image
-from environment import gameGrid
+
+from environment.gameGrid import GameGrid
 import math
 import random
-from entities import zombie
+from core import zombie
+import torchvision.transforms as T
+from runnable_scripts.Utils import get_config, plot_progress
+from itertools import count
+import torch
+
+"""
+Assumptions - data types:
+angle: float in range [-zombie_max_angle, zombie_max_angle] radians
+current position of zombies: int in range [0, grid_height * grid_width - 1]
+
+the zombie home is positioned in the middle of the left side of the board.
+"""
 
 DISPLAY_WIDTH = 1600
 DISPLAY_HEIGHT = 800
@@ -22,19 +37,27 @@ def calculate_start_positions(grid):
     return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), grid.get_width())
 
 
-class Env:
+class Game:
 
-    def __init__(self, grid: gameGrid, steps_per_episodes, light_size):
+    def __init__(self, device, agent_zombie, agent_light):
+        self.agent_zombie = agent_zombie(device, 'zombie')
+        self.agent_light = agent_light(device, 'light')
+
         pygame.init()
         pygame.display.set_caption('pickleking')
-        self.steps_per_episodes = steps_per_episodes
+        # load main info
+        main_info = get_config("MainInfo")
+        self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2
+        self.light_size = int(main_info['light_size'])
+        self.check_point = int(main_info['check_point'])
+        self.total_episodes = int(main_info['num_episodes']) + int(main_info['num_test_episodes'])
+        # other fields
         self.max_hit_points = MAX_HIT_POINTS
         self.display_width = DISPLAY_WIDTH
         self.display_height = DISPLAY_HEIGHT
-        self.light_size = light_size
         self.game_display = pygame.display.set_mode((self.display_width, self.display_height))
         self.clock = pygame.time.Clock()
-        self.grid = grid
+        self.grid = GameGrid()
         self.start_positions = calculate_start_positions(self.grid)
         self.zombie_image, self.light_image, self.grid_image = self.set_up()
         self.current_time = 0
@@ -45,11 +68,59 @@ class Env:
         self.max_velocity = MAX_VELOCITY
         self.dt = DT
 
+        self.device = device
+        self.current_screen = None
+        self.done = False
+
     def reset(self):
         self.current_time = 0
         self.zombie_num = 0
         self.alive_zombies = []  # list of the currently alive zombies
         self.all_zombies = []  # list of all zombies (from all time)
+        self.current_screen = None
+
+    def play_game(self, path):
+        episodes_dict = {'episode_rewards': [], 'episode_durations': []}
+        steps_dict_light = {'epsilon': [], 'action': [], 'step': []}
+        steps_dict_zombie = {'epsilon': [], 'action': [], 'step': []}
+
+        for episode in range(self.total_episodes):
+            self.reset()
+            state_zombie, state_light = self.get_state()
+            zombie_master_reward = 0
+            episode_start_time = time.time()
+            for time_step in count():
+                action_zombie, rate, current_step = self.agent_zombie.select_action(state_zombie)
+                action_light, rate, current_step = self.agent_light.select_action(state_light)
+
+                # update dict
+                steps_dict_light['epsilon'].append(rate)
+                steps_dict_light['action'].append(action_light.numpy()[0] // self.grid.get_width())
+                steps_dict_light['step'].append(time_step)
+                steps_dict_zombie['epsilon'].append(rate)
+                steps_dict_zombie['action'].append(int(action_zombie.numpy()[0]))
+                steps_dict_zombie['step'].append(time_step)
+
+                reward = self.step(self.start_positions[action_zombie.numpy()], action_light.numpy())
+                zombie_master_reward += reward
+                next_state_zombie, next_state_light = self.get_state()
+
+                self.agent_zombie.learn(state_zombie.unsqueeze(0), action_zombie, next_state_zombie.unsqueeze(0), reward)
+                self.agent_light.learn(state_light.unsqueeze(0), action_light, next_state_light.unsqueeze(0), reward * -1)  # agent_light gets the opposite
+
+                state_zombie, state_light = next_state_zombie, next_state_light
+
+                if self.done:  # if the episode is done, store it's reward and plot the moving average
+                    episodes_dict['episode_rewards'].append(zombie_master_reward)
+                    episodes_dict['episode_durations'].append(time.time() - episode_start_time)
+                    break
+
+            if episode % self.check_point == 0:
+                plot_progress(path, episodes_dict, self.check_point)
+
+        plot_progress(path, episodes_dict, self.check_point)
+
+        return episodes_dict, steps_dict_light, steps_dict_zombie
 
     def action_space(self):
         light_action_space = self.grid.get_height() * self.grid.get_width()
@@ -85,20 +156,20 @@ class Env:
         self.update(light_action)
         # damaged_zombies = 0  # for debugging
         reward = 0
-        temp_alive_zombies = list(
-            np.copy(self.alive_zombies))  # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
+        # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
+        temp_alive_zombies = list(np.copy(self.alive_zombies))
+
         for z in self.alive_zombies:
-            temp_hit_points = z.hit_points
             z.move(light_action)
             if z.x >= self.grid.get_width():
                 if self.keep_alive(z.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
                 # deleting a zombie that reached the border
                 temp_alive_zombies.remove(z)
-            # elif z.hit_points > temp_hit_points: damaged_zombies += 1
         self.alive_zombies = temp_alive_zombies
-        # print(damaged_zombies)
-        return self.get_pygame_window(), reward, self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
+
+        self.done = self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
+        return torch.tensor([reward], device=self.device)
 
     def keep_alive(self, h):
         if h >= self.max_hit_points:  # if the zombie sustained a lot of damaged
@@ -111,6 +182,16 @@ class Env:
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
             return np.power(h / self.max_hit_points, 1 / 3) < random.random()
+
+    def get_state(self):
+        zombie_grid = self.grid.get_values()
+        zombie_grid = zombie_grid.astype(np.float32)
+        zombie_grid.fill(0)
+        health_grid = np.copy(zombie_grid)
+        for i in self.alive_zombies:
+            zombie_grid[int(i.y), int(i.x)] = 1
+            health_grid[int(i.y), int(i.x)] = i.hit_points
+        return torch.from_numpy(zombie_grid).flatten(), torch.from_numpy(np.concatenate((zombie_grid, health_grid))).flatten()
 
     def get_pygame_window(self):
         return pygame.surfarray.array3d(pygame.display.get_surface())
@@ -181,3 +262,46 @@ class Env:
     def end_game(self):
         pygame.quit()
         quit()
+
+    def just_starting(self):
+        # current screen is set to none in the beginning and in the end of an episode
+        return self.current_screen is None
+
+    def get_state_old(self):
+        if self.just_starting() or self.done:
+            self.current_screen = self.get_processed_screen()
+            black_screen = torch.zeros_like(self.current_screen)
+            return black_screen
+        else:
+            s1 = self.current_screen
+            s2 = self.get_processed_screen()
+            self.current_screen = s2
+            return s2 - s1
+
+    def get_processed_screen(self):
+        screen = self.get_pygame_window().transpose((2, 0, 1))  # PyTorch expects CHW
+        screen = self.crop_screen(screen)
+        return self.transform_screen_data(screen)
+
+    def crop_screen(self, screen):
+        screen_height = screen.shape[1]
+
+        # Strip off top and bottom
+        top = int(screen_height * 0)
+        bottom = int(screen_height * 1)
+        screen = screen[:, top:bottom, :]
+        return screen
+
+    def transform_screen_data(self, screen):
+        # Convert to float, rescale, convert to tensor
+        screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
+        screen = torch.from_numpy(screen)
+
+        # Use torchvision package to compose image transforms
+        resize = T.Compose([
+            T.ToPILImage()
+            , T.Resize((60, 30))
+            , T.ToTensor()
+        ])
+
+        return resize(screen).unsqueeze(0).to(self.device)  # add a batch dimension (BCHW)
