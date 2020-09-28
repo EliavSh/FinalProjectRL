@@ -13,40 +13,22 @@ from runnable_scripts.Utils import get_config, plot_progress
 from itertools import count
 import torch
 
-"""
-Assumptions - data types:
-angle: float in range [-zombie_max_angle, zombie_max_angle] radians
-current position of zombies: int in range [0, grid_height * grid_width - 1]
-
-the zombie home is positioned in the middle of the left side of the board.
-"""
-
-DISPLAY_WIDTH = 1600
-DISPLAY_HEIGHT = 800
-
-# MAX_ANGLE = np.pi / 10  # (float) radians
-MAX_ANGLE = 0  # np.arctan(self.grid.get_height()/(2*self.grid.get_width())) in case of 800 and 1600, arctan(1/4) = 0.24497866312686414
-MAX_VELOCITY = 1  # (float)
-DT = 1  # (int)
-MAX_HIT_POINTS = 1
-
-
-def calculate_start_positions(grid):
-    zombie_home_length = int(grid.get_height() - 2 * grid.get_width() * math.tan(MAX_ANGLE))
-    zombie_home_start_pos = int(grid.get_height() - zombie_home_length - grid.get_width() * math.tan(MAX_ANGLE))  # m-n-b
-    return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), grid.get_width())
-
 
 class Game:
 
     def __init__(self, device, agent_zombie, agent_light, interactive_mode=False):
+        main_info = get_config("MainInfo")
+        self.grid = GameGrid()
+        self.light_size = int(main_info['light_size'])
+        self.max_angle = int(main_info['max_angle'])
+        self.start_positions = self.calculate_start_positions()
         # set interactive mode
         self.interactive_mode = interactive_mode
         if interactive_mode:
             pygame.init()
             pygame.display.set_caption('pickleking')
-            self.display_width = DISPLAY_WIDTH
-            self.display_height = DISPLAY_HEIGHT
+            self.display_width = int(main_info['display_width'])
+            self.display_height = int(main_info['display_height'])
             self.game_display = pygame.display.set_mode((self.display_width, self.display_height))
             self.zombie_image, self.light_image, self.grid_image = self.set_up()
             self.clock = pygame.time.Clock()
@@ -56,25 +38,25 @@ class Game:
         self.agent_zombie = agent_zombie(device, 'zombie')
         self.agent_light = agent_light(device, 'light')
         # load main info
-        main_info = get_config("MainInfo")
         self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2
-        self.light_size = int(main_info['light_size'])
         self.check_point = int(main_info['check_point'])
         self.total_episodes = int(main_info['num_episodes']) + int(main_info['num_test_episodes'])
         # other fields
-        self.max_hit_points = MAX_HIT_POINTS
-        self.grid = GameGrid()
-        self.start_positions = calculate_start_positions(self.grid)
+        self.max_hit_points = int(main_info['max_hit_points'])
         self.current_time = 0
         self.zombie_num = 0
         self.alive_zombies = []  # list of the currently alive zombies
         self.all_zombies = []  # list of all zombies (from all time)
-        self.max_angle = MAX_ANGLE
-        self.max_velocity = MAX_VELOCITY
-        self.dt = DT
+        self.max_velocity = int(main_info['max_velocity'])
+        self.dt = int(main_info['dt'])
         self.device = device
         self.current_screen = None
         self.done = False
+
+    def calculate_start_positions(self):
+        zombie_home_length = int(self.grid.get_height() - 2 * self.grid.get_width() * math.tan(self.max_angle))
+        zombie_home_start_pos = int(self.grid.get_height() - zombie_home_length - self.grid.get_width() * math.tan(self.max_angle))  # m-n-b
+        return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), self.grid.get_width())
 
     def reset(self):
         self.current_time = 0
@@ -224,9 +206,9 @@ class Game:
         zombie_image = Image.open('../gameUtils/zombie.png')
         light_image = Image.open('../gameUtils/light.png')
         # resize (light_image is doubled for 2x2 cells)
-        zombie_image = zombie_image.resize((int(DISPLAY_WIDTH / self.grid.get_width()), int(DISPLAY_HEIGHT / self.grid.get_height())), 0)
+        zombie_image = zombie_image.resize((int(self.display_width / self.grid.get_width()), int(self.display_height / self.grid.get_height())), 0)
         light_image = light_image.resize(
-            (int(DISPLAY_WIDTH / self.grid.get_width()) * self.light_size, int(DISPLAY_HEIGHT / self.grid.get_height()) * self.light_size), 0)
+            (int(self.display_width / self.grid.get_width()) * self.light_size, int(self.display_height / self.grid.get_height()) * self.light_size), 0)
         # save
         zombie_image.save('../gameUtils/zombie_image.png')
         light_image.save('../gameUtils/light_image.png')
