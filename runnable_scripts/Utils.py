@@ -40,7 +40,9 @@ def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, 
     writer.save()
 
 
-def create_dir(path):
+def create_dir():
+    path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
+                        time.strftime('%Y_%m_%d') + "_at_" + time.strftime('%H_%M'))
     if not os.path.exists(path):
         os.mkdir(path)
     return path
@@ -48,7 +50,7 @@ def create_dir(path):
 
 def get_config(config_topic, is_bool=False, bool_key=''):
     config_object = ConfigParser()
-    config_object.read('C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/configs/config.ini')
+    config_object.read(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'))
     return config_object.getboolean(config_topic, bool_key) if is_bool else config_object[config_topic]
 
 

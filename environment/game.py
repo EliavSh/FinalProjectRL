@@ -16,15 +16,15 @@ import torch
 
 class Game:
 
-    def __init__(self, device, agent_zombie, agent_light, interactive_mode=False):
+    def __init__(self, device, agent_zombie, agent_light):
         main_info = get_config("MainInfo")
         self.grid = GameGrid()
         self.light_size = int(main_info['light_size'])
         self.max_angle = int(main_info['max_angle'])
         self.start_positions = self.calculate_start_positions()
         # set interactive mode
-        self.interactive_mode = interactive_mode
-        if interactive_mode:
+        self.interactive_mode = main_info.getboolean('interactive_mode')
+        if self.interactive_mode:
             pygame.init()
             pygame.display.set_caption('pickleking')
             self.display_width = int(main_info['display_width'])
@@ -33,7 +33,7 @@ class Game:
             self.zombie_image, self.light_image, self.grid_image = self.set_up()
             self.clock = pygame.time.Clock()
         else:
-            os.environ["SDL_VIDEODRIVER"] = "dummy"
+            os.environ["SDL_VIDEODRIVER"] = "dummy"  # not really necessary, here for make sure nothing will pop-up
         # set our agents
         self.agent_zombie = agent_zombie(device, 'zombie')
         self.agent_light = agent_light(device, 'light')
