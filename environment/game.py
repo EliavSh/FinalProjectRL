@@ -40,7 +40,7 @@ class Game:
         # load main info
         self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2
         self.check_point = int(main_info['check_point'])
-        self.total_episodes = int(main_info['num_episodes']) + int(main_info['num_test_episodes'])
+        self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
         # other fields
         self.max_hit_points = int(main_info['max_hit_points'])
         self.current_time = 0

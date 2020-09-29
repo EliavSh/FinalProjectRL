@@ -2,7 +2,7 @@ import time
 import torch
 from environment.game import Game
 from agents.ddqn_agent import DdqnAgent
-from runnable_scripts.Utils import create_dir, ridge_plot, save_ini_file
+from runnable_scripts.Utils import create_dir, ridge_plot_train_test_together, save_ini_file
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     # save and create results graph
     results_file_name = '/results_' + time.strftime('%d_%m_%Y_%H_%M')
     save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, episodes_dict)
-    ridge_plot(path, results_file_name + '.xlsx')
+    ridge_plot_train_test_together(path, results_file_name + '.xlsx')
 
     print('eliav king')
 

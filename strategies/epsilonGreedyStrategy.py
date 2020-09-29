@@ -7,7 +7,7 @@ class EpsilonGreedyStrategy(Strategy):
     def __init__(self):
         # load main info
         main_info = get_config("MainInfo")
-        self.end_learning_step = int(main_info['num_episodes']) * (int(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2)
+        self.end_learning_step = int(main_info['num_train_episodes']) * (int(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2)
         # load strategy info
         strategy_info = get_config('StrategyInfo')
         self.start = float(strategy_info['eps_start'])
