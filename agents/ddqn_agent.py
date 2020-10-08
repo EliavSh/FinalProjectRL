@@ -65,16 +65,16 @@ class DdqnAgent(Agent):
         random_number = random.random()
         if rate > random_number:
             action = random.randrange(self.num_actions)
-            return torch.tensor([action]).to(self.device), rate, self.current_step  # explore
+            return action, rate, self.current_step  # explore
         else:
             with torch.no_grad():
                 # here we are getting the action from one pass along the network. after that we:
                 # convert the tensor to data, then move to cpu using then converting to numpy and lastly, wrapping back to tensor
-                action = torch.tensor([self.policy_net(state).argmax(dim=0).data.cpu().numpy()[0]]).to(self.device)  # max over rows! (dim=0)
+                action = self.policy_net(state).argmax(dim=0).data.cpu().numpy()[0]  # max over rows! (dim=0)
                 return action, rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
-        self.memory.push(Experience(state, action, next_state, reward))
+        self.memory.push(Experience(state, torch.tensor(action).to(self.device), next_state, reward))
         if self.memory.can_provide_sample(self.batch_size):
             experiences = self.memory.sample(self.batch_size)
             states, actions, rewards, next_states = extract_tensors(experiences)
@@ -91,3 +91,6 @@ class DdqnAgent(Agent):
         if self.current_step % self.target_update == 0:
             # update the target net to the same weights as the policy net
             self.target_net.load_state_dict(self.policy_net.state_dict())
+
+    def reset(self):
+        pass

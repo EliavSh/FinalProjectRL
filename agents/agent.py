@@ -9,8 +9,11 @@ class Agent:
 
     @abstractmethod
     def select_action(self, state):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def learn(self, state, action, next_state, reward):
-        pass
+        raise NotImplementedError
+
+    def reset(self):
+        raise NotImplementedError
