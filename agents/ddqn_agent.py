@@ -9,7 +9,6 @@ from core.DQN import DQN
 import random
 import torch
 from runnable_scripts.Utils import get_config
-from strategies.strategy import Strategy
 
 
 def extract_tensors(experiences):
@@ -74,7 +73,7 @@ class DdqnAgent(Agent):
                 return action, rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
-        self.memory.push(Experience(state, torch.tensor(action).to(self.device), next_state, reward))
+        self.memory.push(Experience(state, torch.tensor([action], device=self.device), next_state, torch.tensor([reward], device=self.device)))
         if self.memory.can_provide_sample(self.batch_size):
             experiences = self.memory.sample(self.batch_size)
             states, actions, rewards, next_states = extract_tensors(experiences)
