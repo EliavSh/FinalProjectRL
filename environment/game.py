@@ -158,7 +158,7 @@ class Game:
         reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action)
 
         self.done = self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
-        return torch.tensor([reward], device=self.device)
+        return reward
 
     @staticmethod
     def calc_reward_and_move_zombies(alive_zombies, light_action):

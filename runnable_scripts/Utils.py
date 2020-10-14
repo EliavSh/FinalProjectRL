@@ -36,7 +36,7 @@ def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, 
         index=['target_update', 'train_episodes', 'test_episodes', 'zombies_per_episode', 'check_point', 'batch_size', 'gamma', 'eps_start', 'eps_end',
                'memory_size', 'lr', 'light_size']).to_excel(writer, sheet_name='info')
 
-    pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
+    pd.DataFrame({'reward': list(episodes_dict['episode_rewards']), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
         writer, sheet_name='rewards summary')
     writer.save()
 
@@ -182,7 +182,7 @@ def plot_progress(path, episodes_dict, moving_average_period):
     fig = plot(episodes_dict['episode_rewards'], moving_average_period)
     plt.savefig(path + '/reward.png', bbox_inches='tight')
     plt.close(fig)
-    df = pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']})
+    df = pd.DataFrame({'reward': list(episodes_dict['episode_rewards']), 'episode_duration': episodes_dict['episode_durations']})
     df.to_csv(path + '/log.csv')
 
 
@@ -244,7 +244,7 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
         for iterator in range(len(elements)):
             plt.setp(bp[elements[iterator]], color=colors[iterator])
 
-        y_max = np.max([light_data[light_data['step'] == step]['sum'], zombie_data[zombie_data['step'] == step]['sum']])
+        y_max = np.max(pd.concat([light_data[light_data['step'] == step]['sum'], zombie_data[zombie_data['step'] == step]['sum']]))
 
         # setting uniform x and y lims - light
         ax_objs[-1].set_xlim(x_start, len(x_light))
@@ -440,6 +440,14 @@ def create_data_for_ultimate_plot(dir_path, xlsx_name, number_of_graphs, num_of_
                 np.array([list(map(lambda x: x // steps_per_range_of_episodes, np.array(list(df.index)))), np.array(df['action']), np.ones(len(df))])),
             columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
 
+        n_actions = int(get_config('MainInfo')['board_height'])
+
+        # make sure the first n_actions actions are there
+        for i in range(n_actions):
+            if int(data['action'][i]) != i:
+                data = pd.concat([data.iloc[0:i, :], pd.DataFrame([0, i, 0], index=data.columns.values, columns=[i]).T, data.iloc[i:, :]])
+        data.reset_index(drop=True, inplace=True)
+
         j = 1
         flag = True
         while j < len(data):
@@ -519,7 +527,7 @@ def create_data_for_separate_plot(dir_path, xlsx_name, number_of_train_graphs, n
 
 
 if __name__ == '__main__':
-    temp = 3
+    temp = 2
     if temp == 1:
         dir_path = 'C:/Users/ELIAV/Google Drive/Final Project/FinalProjectRL/results/23_08_2020_at_08_18'
         xlsx_name = '/results_23_08_2020_13_13.xlsx'
@@ -528,8 +536,8 @@ if __name__ == '__main__':
         eps_action_hist(dir_path, xlsx_name, resolution, STEPS_PER_EPISODE)
     elif temp == 2:
         dir_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), os.pardir)) + '\\results\\fixed_light_size_3_range_of_board_5_40\\2020_09_15_at_19_36'
-        xlsx_name = '\\results_15_09_2020_22_54.xlsx'
+            os.path.join(os.path.dirname(__file__), os.pardir)) + '\\results\\2020_10_14_at_02_55'
+        xlsx_name = '\\results_14_10_2020_03_08.xlsx'
         ridge_plot_train_test_together(dir_path=dir_path, xlsx_name=xlsx_name)
     elif temp == 3:
         dir_path = os.path.abspath(
