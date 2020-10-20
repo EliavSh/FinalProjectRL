@@ -14,16 +14,25 @@ from runnable_scripts.Utils import get_config, plot_progress
 from itertools import count
 import torch
 
-MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
-MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
-BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+
+def update_variables():
+    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
+    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
+    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
+    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
+    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+    return MAX_HIT_POINTS, MAX_ANGLE, MAX_VELOCITY, BOARD_WIDTH, BOARD_HEIGHT
 
 
 class Game:
+    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
+    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
+    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
+    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
+    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
 
     def __init__(self, device, agent_zombie, agent_light):
+        Game.MAX_HIT_POINTS, Game.MAX_ANGLE, Game.MAX_VELOCITY, Game.BOARD_WIDTH, Game.BOARD_HEIGHT = update_variables()
         main_info = get_config("MainInfo")
         self.grid = GameGrid()
         self.light_size = int(main_info['light_size'])
@@ -45,11 +54,11 @@ class Game:
         self.agent_zombie = agent_zombie(device, 'zombie')
         self.agent_light = agent_light(device, 'light')
         # load main info
-        self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2
+        self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) - 1
         self.check_point = int(main_info['check_point'])
         self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
         # other fields
-        self.max_hit_points = MAX_HIT_POINTS
+        self.max_hit_points = Game.MAX_HIT_POINTS
         self.current_time = 0
         self.alive_zombies = []  # list of the currently alive zombies
         self.all_zombies = []  # list of all zombies (from all time)
@@ -171,7 +180,7 @@ class Game:
         reward = 0
         for z in alive_zombies:
             z.move(light_action)
-            if z.x >= BOARD_WIDTH:
+            if z.x >= Game.BOARD_WIDTH:
                 if Game.keep_alive(z.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
                 temp_alive_zombies.remove(z)  # deleting a zombie that reached the border
@@ -179,7 +188,7 @@ class Game:
 
     @staticmethod
     def keep_alive(h):
-        if h >= MAX_HIT_POINTS:  # if the zombie sustained a lot of damaged
+        if h >= Game.MAX_HIT_POINTS:  # if the zombie sustained a lot of damaged
             return False
         else:  # else decide by the sine function -> if the result is greater than 0.5 -> keep alive, else -> kill it (no reward for the zombie master)
             """
@@ -188,7 +197,7 @@ class Game:
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
-            return np.power(h / MAX_HIT_POINTS, 1 / 3) < random.random()
+            return np.power(h / Game.MAX_HIT_POINTS, 1 / 3) < random.random()
 
     def get_state(self):
         zombie_grid = self.grid.get_values()
@@ -205,11 +214,11 @@ class Game:
 
     @staticmethod
     def create_zombie(position):
-        if MAX_ANGLE == 0:
-            angle = MAX_ANGLE
+        if Game.MAX_ANGLE == 0:
+            angle = Game.MAX_ANGLE
         else:
-            angle = random.uniform(-MAX_ANGLE, MAX_ANGLE)
-        return Zombie(angle, MAX_VELOCITY, position)
+            angle = random.uniform(-Game.MAX_ANGLE, Game.MAX_ANGLE)
+        return Zombie(angle, Game.MAX_VELOCITY, position)
 
     def set_up(self):
         # get images

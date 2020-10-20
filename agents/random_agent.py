@@ -4,15 +4,23 @@ from agents.agent import Agent
 from runnable_scripts.Utils import get_config
 from strategies.epsilonGreedyStrategy import EpsilonGreedyStrategy
 
-BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+
+def update_variables():
+    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
+    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+    return BOARD_WIDTH, BOARD_HEIGHT
 
 
 class RandomAgent(Agent):
+    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
+    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+
     def __init__(self, device, agent_type):
+        RandomAgent.BOARD_WIDTH, RandomAgent.BOARD_HEIGHT = update_variables()
         super(RandomAgent, self).__init__(EpsilonGreedyStrategy(), agent_type)
         self.current_step = 0
-        self.possible_actions = list(range(BOARD_HEIGHT)) if self.agent_type == 'zombie' else list(range(BOARD_HEIGHT * BOARD_WIDTH))
+        self.possible_actions = list(range(RandomAgent.BOARD_HEIGHT)) if self.agent_type == 'zombie' else list(
+            range(RandomAgent.BOARD_HEIGHT * RandomAgent.BOARD_WIDTH))
 
     def select_action(self, state):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
