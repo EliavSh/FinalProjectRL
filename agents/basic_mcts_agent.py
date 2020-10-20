@@ -212,11 +212,11 @@ class BasicMCTSAgent(Agent):
                 action = BasicMCTSAgent.select_simulation_action(simulation_state, self.possible_actions)
                 one_step_reward, simulation_state = BasicMCTSAgent.simulate_action(simulation_state, self.agent_type, action)
                 # create simulated child (without state - to prevent immediate-storage explosion)
-                new_child = simulation_node.add_child([], action, simulated_child=True)
-                new_child.visits += 1
-                BasicMCTSAgent.EvalUTC(new_child, one_step_reward)  # evaluate UTC score of new child
+                # new_child = simulation_node.add_child([], action, simulated_child=True)
+                # new_child.visits += 1
+                # BasicMCTSAgent.EvalUTC(new_child, one_step_reward)  # evaluate UTC score of new child
                 # set simulation node to current node
-                simulation_node = new_child
+                # simulation_node = new_child
                 # aggregate reward
                 simulation_reward += one_step_reward
                 # print the tree
