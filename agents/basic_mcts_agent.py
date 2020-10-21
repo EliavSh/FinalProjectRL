@@ -42,7 +42,7 @@ class BasicMCTSAgent(Agent):
         self.simulation_depth = int(get_config("TreeAgentInfo")['simulation_depth'])  # number of times to expand a node in single simulation
         self.episode_reward = 0
         self.tree_depth = 0
-        self.NUM_CORE = 6
+        self.NUM_CORE = 12
         self.pool = mp.Pool(self.NUM_CORE)
 
     def select_action(self, state):

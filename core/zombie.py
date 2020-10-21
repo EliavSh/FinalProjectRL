@@ -49,7 +49,7 @@ class Zombie:
 
     @staticmethod
     def reset_id():
-        Zombie.ZOMBIE_NUM = 0
+        Zombie.ZOMBIE_NUM = 1
 
     def update_hit_points(self, light_action):
         light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
