@@ -38,19 +38,18 @@ def main():
 if __name__ == "__main__":
     for exploration_rate in linspace(0.5, 2, 7):
         for size in range(5, 20, 5):
+            path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs', 'config.ini')
+            parser = RawConfigParser()
+            parser.read(path)
+            parser.set('TreeAgentInfo', 'exploration_const', str(exploration_rate))
+            parser.set('MainInfo', 'board_height', str(size))
+            parser.set('MainInfo', 'board_width', str(size))
+            config_file = open(path, 'w')
+            parser.write(config_file, space_around_delimiters=True)
+            config_file.close()
 
-            # path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs', 'config.ini')
-            # parser = RawConfigParser()
-            # parser.read(path)
-            # parser.set('TreeAgentInfo', 'exploration_const', str(exploration_rate))
-            # parser.set('MainInfo', 'board_height', str(size))
-            # parser.set('MainInfo', 'board_width', str(size))
-            # config_file = open(path, 'w')
-            # parser.write(config_file, space_around_delimiters=True)
-            # config_file.close()
-            #
-            # # update all variables due to changes in the configuration file - updating entities here instead of in every round
-            # Zombie.update_variables()
-            # Node.update_variables()
+            # update all variables due to changes in the configuration file
+            Zombie.update_variables()
+            Node.update_variables()
 
             main()
