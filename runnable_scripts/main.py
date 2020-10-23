@@ -10,6 +10,7 @@ from core.zombie import Zombie
 
 
 def main():
+    os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "true"  # cancel py-game display
     from environment.game import Game
     from agents.constant_agent import ConstantAgent
     from agents.ddqn_agent import DdqnAgent
@@ -48,7 +49,7 @@ if __name__ == "__main__":
             # parser.write(config_file, space_around_delimiters=True)
             # config_file.close()
             #
-            # # update all variables due to changes in the configuration file
+            # # update all variables due to changes in the configuration file - updating entities here instead of in every round
             # Zombie.update_variables()
             # Node.update_variables()
 
