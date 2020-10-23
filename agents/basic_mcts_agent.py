@@ -2,13 +2,14 @@ import copy
 import math
 import os
 import random
-
+import multiprocessing as mp
 from environment.game import Game
 from agents.agent import Agent
 from strategies.epsilonGreedyStrategy import EpsilonGreedyStrategy
 from runnable_scripts.Utils import get_config
 from core.node import Node
 import numpy as np
+from core.costly_simulation import CostlySimulation
 
 
 def update_variables():
@@ -42,6 +43,12 @@ class BasicMCTSAgent(Agent):
         self.episode_reward = 0
         self.tree_depth = 0
 
+        self.pool = mp.Pool(mp.cpu_count())
+
+        main_info = get_config('MainInfo')
+        self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width'])
+        self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
+
     def select_action(self, state):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
@@ -63,11 +70,17 @@ class BasicMCTSAgent(Agent):
         self.temporary_root = self.temporary_root.children[action]
         # self.PrintTree()
 
+        # when the game ends - close the pool to avoid memory explosion
+        if self.current_step == self.total_episodes * self.steps_per_episodes:
+            print("eliav king")
+            self.pool.close()
+            self.pool.join()
+
         return action, rate, self.current_step
 
     def learn(self, _, action, __, reward):
         # back-propagation phase, start back-propagating from the current real world node
-        self.episode_reward += reward
+        # self.episode_reward += reward
         pass
 
     def selection(self):
@@ -202,31 +215,25 @@ class BasicMCTSAgent(Agent):
         #     new_child = selected_child.add_child([], expansion_action, simulated_child=True)
         #     new_child.visits += 1
         # Perform simulation.
-        total_reward = []
-        for _ in range(self.simulation_num):
-            simulation_reward = 0
-            simulation_state = selected_child.children[expansion_action].state
-            simulation_node = selected_child.children[expansion_action]
-            for __ in range(self.simulation_depth):
-                # select and execute next action (taken from simulation node)
-                action = BasicMCTSAgent.select_simulation_action(simulation_state, self.possible_actions)
-                one_step_reward, simulation_state = BasicMCTSAgent.simulate_action(simulation_state, self.agent_type, action)
-                # create simulated child (without state - to prevent immediate-storage explosion)
-                # new_child = simulation_node.add_child([], action, simulated_child=True)
-                # new_child.visits += 1
-                # BasicMCTSAgent.EvalUTC(new_child, one_step_reward)  # evaluate UTC score of new child
-                # set simulation node to current node
-                # simulation_node = new_child
-                # aggregate reward
-                simulation_reward += one_step_reward
-                # print the tree
-                # self.PrintTree()
-            total_reward.append(simulation_reward)
+        list_of_objects = []
+        simulation_state = selected_child.children[expansion_action].state
 
-        average_total_reward = np.average(total_reward) if self.agent_type == 'zombie' else -1 * np.average(total_reward)
+        for _ in range(self.simulation_num):
+            obj = CostlySimulation(self.simulation_depth, simulation_state, self.possible_actions, self.agent_type)
+            list_of_objects.append(obj)
+
+        list_of_results = self.pool.map(BasicMCTSAgent.worker, ((obj, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.BOARD_WIDTH) for obj in list_of_objects))
+        # pool.close()
+        # pool.join()
+
+        average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(list_of_results)
 
         # back-prop from the expanded child (the child of the selected node)
         BasicMCTSAgent.back_propagation(selected_child.children[expansion_action], average_total_reward)
+
+    @staticmethod
+    def worker(arg):
+        return arg[0].costly_simulation(arg[1], arg[2])
 
     @staticmethod
     def simulate_action(alive_zombies, agent_type, action):
@@ -300,9 +307,9 @@ class BasicMCTSAgent(Agent):
             return True
 
     def reset(self):
-        BasicMCTSAgent.back_propagation(self.temporary_root, self.episode_reward)
+        # BasicMCTSAgent.back_propagation(self.temporary_root, self.episode_reward)
         self.temporary_root = self.root
-        self.episode_reward = 0
+        # self.episode_reward = 0
         # if self.agent_type == 'zombie':
         #     self.PrintTree()
 

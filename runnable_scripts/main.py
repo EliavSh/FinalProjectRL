@@ -10,6 +10,7 @@ from core.zombie import Zombie
 
 
 def main():
+    os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "true"  # cancel py-game display
     from environment.game import Game
     from agents.constant_agent import ConstantAgent
     from agents.ddqn_agent import DdqnAgent
@@ -37,7 +38,6 @@ def main():
 if __name__ == "__main__":
     for exploration_rate in linspace(0.5, 2, 7):
         for size in range(5, 20, 5):
-
             path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs', 'config.ini')
             parser = RawConfigParser()
             parser.read(path)

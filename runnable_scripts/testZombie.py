@@ -1,9 +1,42 @@
-import unittest
+import time
+import dask
+
+from dask.distributed import Client
+
+client = Client(asynchronous=True)
 
 
-class TestZombie(unittest.TestCase):
-    pass
+# import unittest
+# class TestZombie(unittest.TestCase):
+#     pass
 
+def costly_simulation(list_params: list) -> int:
+    total_score = 0
+    for pp in list_params:
+        time.sleep(pp)
+        total_score += pp
+    return total_score
+
+
+total_scores = []
+start = time.time()
+# second try using client compute:
+for param in [1, 2, 3, 2, 1, 3, 5, 1, 3, 5, 3, 5]:
+    lazy_score = client.submit(costly_simulation, [param])
+    total_scores.append(await lazy_score)
+
+"""
+first try using dask.compute
+for param in [1, 2, 3, 2, 1, 3, 5, 1, 3, 5, 3, 5]:
+    lazy_score = dask.delayed(costly_simulation)([param])
+    total_scores.append(lazy_score)
+
+total_scores = dask.compute(*total_scores)
+"""
+stop = time.time()
+
+print(total_scores)
+print(stop - start)
 
 """
     def setUp(self):
