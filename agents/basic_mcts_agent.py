@@ -42,8 +42,12 @@ class BasicMCTSAgent(Agent):
         self.simulation_depth = int(get_config("TreeAgentInfo")['simulation_depth'])  # number of times to expand a node in single simulation
         self.episode_reward = 0
         self.tree_depth = 0
-        self.NUM_CORE = 12
-        self.pool = mp.Pool(self.NUM_CORE)
+
+        self.pool = mp.Pool(mp.cpu_count())
+
+        main_info = get_config('MainInfo')
+        self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width'])
+        self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
 
     def select_action(self, state):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
@@ -65,6 +69,12 @@ class BasicMCTSAgent(Agent):
         self.eval_children(self.temporary_root, [action])
         self.temporary_root = self.temporary_root.children[action]
         # self.PrintTree()
+
+        # when the game ends - close the pool to avoid memory explosion
+        if self.current_step == self.total_episodes * self.steps_per_episodes:
+            print("eliav king")
+            self.pool.close()
+            self.pool.join()
 
         return action, rate, self.current_step
 

@@ -54,7 +54,7 @@ class Game:
         self.agent_zombie = agent_zombie(device, 'zombie')
         self.agent_light = agent_light(device, 'light')
         # load main info
-        self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) - 1
+        self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width']) - 1
         self.check_point = int(main_info['check_point'])
         self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
         # other fields
