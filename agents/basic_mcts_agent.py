@@ -59,20 +59,30 @@ class BasicMCTSAgent(Agent):
         # expansion phase, here we selecting the action from which we will simulate the selected_child play-out
         # keep in mind that in this phase we expand a node that is NOT the temporary root, the expansion action doesn't relate to the real action we are taking
         # action = self.expansion_all_children(selected_child)
-        expansion_action = self.expansion_one_child(selected_child)
+        if selected_child == self.root:
+            # if the selected child is root, expand all its children
+            expanded_child = self.expansion_all_children(selected_child)
+        elif selected_child.parent is not None and selected_child.parent.num_children != len(self.possible_actions):
+            # if the selected child is missing a brother (we managed to choose him thanks to some real action), expand all its brothers and choose one
+            expanded_child = self.expansion_all_children(selected_child.parent)
+        elif selected_child.visits == 0:
+            # if we never visited that node, start roll-out from there
+            expanded_child = selected_child
+        else:
+            # in case the node is a leaf but we already been there
+            expanded_child = self.expansion_all_children(selected_child)
 
         # simulation phase
-        self.simulation(expansion_action, selected_child)
+        self.simulation(expanded_child)
 
         # select next action
         action = self.select_expansion_action(self.temporary_root, self.possible_actions)
-        self.eval_children(self.temporary_root, [action])
+        self.expansion_all_children(self.temporary_root)
         self.temporary_root = self.temporary_root.children[action]
         # self.PrintTree()
 
         # when the game ends - close the pool to avoid memory explosion
         if self.current_step == self.total_episodes * self.steps_per_episodes:
-            print("eliav king")
             self.pool.close()
             self.pool.join()
 
@@ -84,6 +94,11 @@ class BasicMCTSAgent(Agent):
         pass
 
     def selection(self):
+        """
+        The selection Phase in the MCTS algorithm.
+        selects leaf by following the UCT algorithm
+        :return:
+        """
         selected_child = self.temporary_root
 
         # Check if child nodes exist.
@@ -93,27 +108,26 @@ class BasicMCTSAgent(Agent):
             HasChild = False
 
         while HasChild:
-            selected_child = self.select_child(selected_child)
-            if selected_child.num_children == 0 or selected_child.is_terminal or selected_child.simulated_node:
+            selected_child = self.select_best_child(selected_child)
+            if selected_child.num_children == 0 or selected_child.is_terminal:
                 HasChild = False
 
         return selected_child
 
-    # -----------------------------------------------------------------------#
-    # Description:
-    #	Given a node, selects the first unvisited child node, or if all
-    # 	children are visited, selects the node with greatest UTC value.
-    # node	- node from which to select child node from.
-    # -----------------------------------------------------------------------#
     def select_child(self, node: Node) -> Node:
-        selected_child = node
+        """
+        Given a node, selects a random unvisited child node.
+        Or if all children are visited, selects the node with greatest UTC value.
+        :param node: node from which to select child node from.
+        :return: The selected child
+        """
         if node.num_children == 0:
             return node
 
         # check if 'node' has any unexpanded nodes - which is any None value in children dictionary OR there is a child but it's simulated
         not_visited_actions = []
         for action, child in node.children.items():
-            if child is None or child.simulated_node:
+            if child is None or child.visits == 0:
                 # create the unexpanded child
                 not_visited_actions.append(action)
         # chosen child from one of the unexpanded children - if there are any
@@ -122,9 +136,19 @@ class BasicMCTSAgent(Agent):
             _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
             return node.add_child(alive_zombies, action)
 
+        return BasicMCTSAgent.select_best_child(node)
+
+    @staticmethod
+    def select_best_child(node):
+        """
+        Selects the best child of a node
+        :param node: Node to select one of its children
+        :return: highest UCT valued child
+        """
+        selected_child = node
         max_weight = 0.0
         possible_children = []
-        for child in list(node.children.values()):
+        for child in list(filter(None, node.children.values())):
             weight = child.uct
             if len(possible_children) == 0:
                 possible_children.append(child)
@@ -138,46 +162,35 @@ class BasicMCTSAgent(Agent):
             selected_child = random.sample(possible_children, 1)[0]
         return selected_child
 
-    # -----------------------------------------------------------------------#
-    # Description: Performs expansion phase of the MCTS.
-    # Leaf	- Leaf node to expand.
-    # -----------------------------------------------------------------------#
     def expansion_all_children(self, leaf):
-        # if leaf.visits == 0 and leaf.parent is not None:
-        #     return leaf
-        # else:
-        # Expand.
-        if leaf.num_children == 0:
-            self.eval_children(leaf, self.possible_actions)
-
-        return self.select_expansion_action(leaf.state, self.possible_actions)
+        self.eval_children(leaf, self.possible_actions)
+        return random.sample(list(leaf.children.values()), 1)[0]
 
     def expansion_one_child(self, leaf):
         action = self.select_expansion_action(leaf, self.possible_actions)
         self.eval_children(leaf, [action])
         return action
 
-    # -----------------------------------------------------------------------#
-    # Description:
-    #	Evaluates all the possible children states given a node state
-    #	and returns the possible children Nodes.
-    # node	- node from which to evaluate children.
-    # -----------------------------------------------------------------------#
-    def eval_children(self, node, actions):  # TODO - we must not simulate when picking a real action, search: # select next action
-        # evaluate all possible next states
+    def eval_children(self, node, actions):
+        """
+        Evaluates all the possible children states given a node state
+        :param node: node from which to evaluate children.
+        :param actions: list of all possible actions to choose from
+        :return: returns the possible children Nodes
+        """
         for action in actions:
             _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
             node.add_child(alive_zombies, action)
 
         return node.children
 
-    # -----------------------------------------------------------------------#
-    # Description:
-    #	Selects a child node randomly.
-    # node	- node from which to select a random child.
-    # -----------------------------------------------------------------------#
     def select_expansion_action(self, node, possible_actions):
-        # Wisely selects a child node.
+        """
+        Wisely selects a child node.
+        :param node: the selected node to expand child from
+        :param possible_actions: list of all possible actions to choose from
+        :return: the selected action
+        """
         selected_child = self.select_child(node)
         selected_action = None
         for key, value in node.children.items():
@@ -194,42 +207,27 @@ class BasicMCTSAgent(Agent):
         i = random.sample(possible_actions, 1)[0]
         return i
 
-    # -----------------------------------------------------------------------#
-    # Description:
-    #	Performs the simulation phase of the MCTS.
-    #   for now, the agent takes random actions during the simulation
-    # node	- node from which to perform simulation.
-    # -----------------------------------------------------------------------#
-    def simulation(self, expansion_action, selected_child):
+    def simulation(self, selected_child):
         """
         Simulating states from previous states and actions
         This phase happens right after we've chose the expansion, and from the selected child with action
-        :param expansion_action: the action from the selected_child
-        :param selected_child: the child from the selection phase
+        :param selected_child: node from which to perform simulation.
         :return:
         """
-        # this is here for enable the simulation to start from the root. by doing that we avoid the case of constant two steps at the beginning
-        # we basically say that the root is the "selected child" and simulate from it, then the back-prop doesn't do much, updates only the root
-        # if selected_child.level <= self.simulation_depth:
-        #     selected_child = self.root
-        #     new_child = selected_child.add_child([], expansion_action, simulated_child=True)
-        #     new_child.visits += 1
         # Perform simulation.
         list_of_objects = []
-        simulation_state = selected_child.children[expansion_action].state
+        simulation_state = selected_child.state
 
         for _ in range(self.simulation_num):
             obj = CostlySimulation(self.simulation_depth, simulation_state, self.possible_actions, self.agent_type)
             list_of_objects.append(obj)
 
         list_of_results = self.pool.map(BasicMCTSAgent.worker, ((obj, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.BOARD_WIDTH) for obj in list_of_objects))
-        # pool.close()
-        # pool.join()
 
         average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(list_of_results)
 
         # back-prop from the expanded child (the child of the selected node)
-        BasicMCTSAgent.back_propagation(selected_child.children[expansion_action], average_total_reward)
+        BasicMCTSAgent.back_propagation(selected_child, average_total_reward)
 
     @staticmethod
     def worker(arg):
@@ -267,7 +265,7 @@ class BasicMCTSAgent(Agent):
 
     @staticmethod
     def back_propagation(node, result):
-        result = result  # / (int(get_config('MainInfo')['zombies_per_episode']) + 3)
+        result = result
         CurrentNode = node
 
         # Update node's weight.
@@ -280,9 +278,8 @@ class BasicMCTSAgent(Agent):
 
     @staticmethod
     def EvalUTC(node, result):
-        if not node.simulated_node:
-            node.wins += result
-            node.visits += 1
+        node.wins += result
+        node.visits += 1
 
         UTC = node.wins / node.visits + BasicMCTSAgent.evaluate_exploration(node)
 
@@ -313,24 +310,24 @@ class BasicMCTSAgent(Agent):
         # if self.agent_type == 'zombie':
         #     self.PrintTree()
 
-    # -----------------------------------------------------------------------#
-    # Description:
-    #	Prints the tree to file.
-    # -----------------------------------------------------------------------#
     def PrintTree(self):
+        """
+        Prints the tree to file.
+        :return:
+        """
         f = open(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'Tree.txt'), 'w')
         node = self.root
         self.PrintNode(f, node, "")
         f.close()
 
-    # -----------------------------------------------------------------------#
-    # Description:
-    #	Prints the tree node and its details to file.
-    # node			- node to print.
-    # Indent		- Indent character.
-    # IsTerminal	- True: node is terminal. False: Otherwise.
-    # -----------------------------------------------------------------------#
     def PrintNode(self, file, node, Indent):
+        """
+        Prints the tree node and its details to file.
+        :param file: file to write into
+        :param node: node to print.
+        :param Indent: Indent character.
+        :return:
+        """
         file.write(Indent)
         file.write("|-")
         Indent += "| "
