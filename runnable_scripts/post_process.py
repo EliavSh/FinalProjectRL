@@ -3,7 +3,7 @@ import shutil
 
 from numpy import linspace
 
-dir_name = "2020_10_27__board_10_to_30_jumping_10__exp_rate_0_5_to_2_jumping_0_15"
+dir_name = "1000_episodes"
 
 # create rewards dir
 path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results", dir_name, 'rewards')

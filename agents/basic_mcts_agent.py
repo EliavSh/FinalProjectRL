@@ -122,9 +122,19 @@ class BasicMCTSAgent(Agent):
             _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
             return node.add_child(alive_zombies, action)
 
+        return BasicMCTSAgent.select_best_child(node)
+
+    @staticmethod
+    def select_best_child(node):
+        """
+        Selects the best child of a node
+        :param node: Node to select one of its children
+        :return: highest UCT valued child
+        """
+        selected_child = node
         max_weight = 0.0
         possible_children = []
-        for child in list(node.children.values()):
+        for child in list(filter(None, node.children.values())):
             weight = child.uct
             if len(possible_children) == 0:
                 possible_children.append(child)
@@ -137,6 +147,7 @@ class BasicMCTSAgent(Agent):
         if len(possible_children) > 0:
             selected_child = random.sample(possible_children, 1)[0]
         return selected_child
+
 
     # -----------------------------------------------------------------------#
     # Description: Performs expansion phase of the MCTS.
