@@ -46,6 +46,7 @@ if __name__ == "__main__":
                 parser.set('TreeAgentInfo', 'exploration_const', str(exploration_rate))
                 parser.set('MainInfo', 'board_height', str(size))
                 parser.set('MainInfo', 'board_width', str(size//2))
+                parser.set('MainInfo', 'light_size', str(size//2))
                 config_file = open(path, 'w')
                 parser.write(config_file, space_around_delimiters=True)
                 config_file.close()

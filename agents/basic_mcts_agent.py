@@ -55,6 +55,7 @@ class BasicMCTSAgent(Agent):
 
         # selection phase
         selected_child = self.selection()
+        assert selected_child.num_children == 0
 
         # expansion phase, here we selecting the action from which we will simulate the selected_child play-out
         # keep in mind that in this phase we expand a node that is NOT the temporary root, the expansion action doesn't relate to the real action we are taking
@@ -72,6 +73,8 @@ class BasicMCTSAgent(Agent):
             # in case the node is a leaf but we already been there
             expanded_child = self.expansion_all_children(selected_child)
 
+        assert expanded_child.num_children == len(self.possible_actions)
+
         # simulation phase
         self.simulation(expanded_child)
 
@@ -79,6 +82,7 @@ class BasicMCTSAgent(Agent):
         action = self.select_expansion_action(self.temporary_root, self.possible_actions)
         self.expansion_all_children(self.temporary_root)
         self.temporary_root = self.temporary_root.children[action]
+        assert selected_child.num_children == len(self.possible_actions)
         # self.PrintTree()
 
         # when the game ends - close the pool to avoid memory explosion
@@ -91,7 +95,7 @@ class BasicMCTSAgent(Agent):
     def learn(self, _, action, __, reward):
         # back-propagation phase, start back-propagating from the current real world node
         # self.episode_reward += reward
-        pass
+        self.back_propagation(self.temporary_root, reward, self.root)
 
     def selection(self):
         """
@@ -146,6 +150,8 @@ class BasicMCTSAgent(Agent):
         :return: highest UCT valued child
         """
         selected_child = node
+        if node.num_children == 0:
+            return node
         max_weight = 0.0
         possible_children = []
         for child in list(filter(None, node.children.values())):
@@ -191,7 +197,7 @@ class BasicMCTSAgent(Agent):
         :param possible_actions: list of all possible actions to choose from
         :return: the selected action
         """
-        selected_child = self.select_child(node)
+        selected_child = self.select_best_child(node)
         selected_action = None
         for key, value in node.children.items():
             if value == selected_child:
@@ -227,7 +233,7 @@ class BasicMCTSAgent(Agent):
         average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(list_of_results)
 
         # back-prop from the expanded child (the child of the selected node)
-        BasicMCTSAgent.back_propagation(selected_child, average_total_reward)
+        BasicMCTSAgent.back_propagation(average_total_reward, self.temporary_root)
 
     @staticmethod
     def worker(arg):
@@ -264,14 +270,15 @@ class BasicMCTSAgent(Agent):
         return total_reward, alive_zombies
 
     @staticmethod
-    def back_propagation(node, result):
+    def back_propagation(node, result, root):
         result = result
         CurrentNode = node
 
         # Update node's weight.
         BasicMCTSAgent.EvalUTC(CurrentNode, result)
 
-        while BasicMCTSAgent.HasParent(CurrentNode):
+        # keep updating until the desired root
+        while CurrentNode.level != root.level:
             # Update parent node's weight.
             CurrentNode = CurrentNode.parent
             BasicMCTSAgent.EvalUTC(CurrentNode, result)
