@@ -55,7 +55,7 @@ class BasicMCTSAgent(Agent):
 
         # selection phase
         selected_child = self.selection()
-        assert selected_child.num_children == 0
+        assert selected_child.num_children == 0 or selected_child.is_terminal
 
         # expansion phase, here we selecting the action from which we will simulate the selected_child play-out
         # keep in mind that in this phase we expand a node that is NOT the temporary root, the expansion action doesn't relate to the real action we are taking
@@ -73,7 +73,8 @@ class BasicMCTSAgent(Agent):
             # in case the node is a leaf but we already been there
             expanded_child = self.expansion_all_children(selected_child)
 
-        assert expanded_child.num_children == len(self.possible_actions)
+        assert expanded_child.num_children == 0
+        assert selected_child.num_children == 0 or selected_child.num_children == len(self.possible_actions)
 
         # simulation phase
         self.simulation(expanded_child)
@@ -82,7 +83,7 @@ class BasicMCTSAgent(Agent):
         action = self.select_expansion_action(self.temporary_root, self.possible_actions)
         self.expansion_all_children(self.temporary_root)
         self.temporary_root = self.temporary_root.children[action]
-        assert selected_child.num_children == len(self.possible_actions)
+        assert self.temporary_root.num_children == len(self.possible_actions) or self.temporary_root.num_children == 0
         # self.PrintTree()
 
         # when the game ends - close the pool to avoid memory explosion
@@ -95,7 +96,8 @@ class BasicMCTSAgent(Agent):
     def learn(self, _, action, __, reward):
         # back-propagation phase, start back-propagating from the current real world node
         # self.episode_reward += reward
-        self.back_propagation(self.temporary_root, reward, self.root)
+        # self.back_propagation(self.temporary_root, reward, self.root)
+        pass
 
     def selection(self):
         """
@@ -107,14 +109,15 @@ class BasicMCTSAgent(Agent):
 
         # Check if child nodes exist.
         if selected_child.num_children > 0:
-            HasChild = True
+            has_child = True
         else:
-            HasChild = False
+            has_child = False
 
-        while HasChild:
-            selected_child = self.select_best_child(selected_child)
+        while has_child:
+            # selecting the best child unless there is unexpanded child in the way - select_child method is required!
+            selected_child = self.select_child(selected_child)
             if selected_child.num_children == 0 or selected_child.is_terminal:
-                HasChild = False
+                has_child = False
 
         return selected_child
 
@@ -122,6 +125,9 @@ class BasicMCTSAgent(Agent):
         """
         Given a node, selects a random unvisited child node.
         Or if all children are visited, selects the node with greatest UTC value.
+         @note: we must start the selection from here - imagine that a child was expanded, immediately we expanded all its brothers too.
+         in the next turn we might want to start simulating from one of its brothers instead of picking always him with the 'select_best_child'
+         (after we evaluated one of the brothers with 'eval_utc' method, that brother would always be selected via 'select_best_child' method)
         :param node: node from which to select child node from.
         :return: The selected child
         """
@@ -130,15 +136,15 @@ class BasicMCTSAgent(Agent):
 
         # check if 'node' has any unexpanded nodes - which is any None value in children dictionary OR there is a child but it's simulated
         not_visited_actions = []
+        assert node.num_children == 0 or node.num_children == len(self.possible_actions)
         for action, child in node.children.items():
-            if child is None or child.visits == 0:
-                # create the unexpanded child
+            # search for children that never rolled out (simulation started from them)
+            if child.visits == 0:
                 not_visited_actions.append(action)
         # chosen child from one of the unexpanded children - if there are any
         if len(not_visited_actions) > 0:
             action = random.sample(not_visited_actions, 1)[0]
-            _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
-            return node.add_child(alive_zombies, action)
+            return node.children[action]
 
         return BasicMCTSAgent.select_best_child(node)
 
@@ -184,9 +190,11 @@ class BasicMCTSAgent(Agent):
         :param actions: list of all possible actions to choose from
         :return: returns the possible children Nodes
         """
-        for action in actions:
-            _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
-            node.add_child(alive_zombies, action)
+        assert node.num_children == 10 or node.num_children == 0
+        if node.num_children == 0:
+            for action in actions:
+                _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
+                node.add_child(alive_zombies, action)
 
         return node.children
 
@@ -233,7 +241,7 @@ class BasicMCTSAgent(Agent):
         average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(list_of_results)
 
         # back-prop from the expanded child (the child of the selected node)
-        BasicMCTSAgent.back_propagation(average_total_reward, self.temporary_root)
+        BasicMCTSAgent.back_propagation(selected_child, average_total_reward, self.temporary_root)
 
     @staticmethod
     def worker(arg):
@@ -271,26 +279,23 @@ class BasicMCTSAgent(Agent):
 
     @staticmethod
     def back_propagation(node, result, root):
-        result = result
-        CurrentNode = node
+        current_node = node
 
         # Update node's weight.
-        BasicMCTSAgent.EvalUTC(CurrentNode, result)
+        BasicMCTSAgent.eval_utc(current_node, result)
 
         # keep updating until the desired root
-        while CurrentNode.level != root.level:
+        while current_node.level != root.level:
             # Update parent node's weight.
-            CurrentNode = CurrentNode.parent
-            BasicMCTSAgent.EvalUTC(CurrentNode, result)
+            current_node = current_node.parent
+            BasicMCTSAgent.eval_utc(current_node, result)
 
     @staticmethod
-    def EvalUTC(node, result):
+    def eval_utc(node, result):
         node.wins += result
         node.visits += 1
 
-        UTC = node.wins / node.visits + BasicMCTSAgent.evaluate_exploration(node)
-
-        node.uct = UTC
+        node.uct = node.wins / node.visits + BasicMCTSAgent.evaluate_exploration(node)
 
     @staticmethod
     def evaluate_exploration(node):
@@ -304,7 +309,7 @@ class BasicMCTSAgent(Agent):
         return BasicMCTSAgent.C * np.sqrt(np.log(t or 1) / n)
 
     @staticmethod
-    def HasParent(node):
+    def has_parent(node):
         if node.parent is None:
             return False
         else:
@@ -317,31 +322,31 @@ class BasicMCTSAgent(Agent):
         # if self.agent_type == 'zombie':
         #     self.PrintTree()
 
-    def PrintTree(self):
+    def print_tree(self):
         """
         Prints the tree to file.
         :return:
         """
         f = open(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'Tree.txt'), 'w')
         node = self.root
-        self.PrintNode(f, node, "")
+        self.print_node(f, node, "")
         f.close()
 
-    def PrintNode(self, file, node, Indent):
+    def print_node(self, file, node, indent):
         """
         Prints the tree node and its details to file.
         :param file: file to write into
         :param node: node to print.
-        :param Indent: Indent character.
+        :param indent: Indent character.
         :return:
         """
-        file.write(Indent)
+        file.write(indent)
         file.write("|-")
-        Indent += "| "
+        indent += "| "
 
         string = str(node.level) + " ("
         string += "W: " + str(node.wins) + ", N: " + str(node.visits) + ", UCT: " + str(node.uct) + ") \n"
         file.write(string)
 
         for child in list(filter(None, list(node.children.values()))):
-            self.PrintNode(file, child, Indent)
+            self.print_node(file, child, indent)

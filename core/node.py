@@ -21,23 +21,14 @@ class Node:
         self.is_terminal = False
         self.level = 0
 
-    def set_weight(self, weight):
-        self.weight = weight
-
     def add_child(self, state, action):
-        # add a child if we never did it before at all
-        if self.children[action] is None:
-            new_child = Node(state, list(self.children.keys()))
-            self.children[action] = new_child
-            self.num_children += 1
-            new_child.parent = self
-            new_child.level = self.level + 1
-            if new_child.level >= Node.BOARD_WIDTH + Node.ZOMBIES_PER_EPISODE:
-                new_child.is_terminal = True
+        new_child = Node(state, list(self.children.keys()))
+        self.children[action] = new_child
+        self.num_children += 1
+        assert self.num_children <= len(list(self.children.keys()))  # asserting that the number of children is never greater from the maximum possible children number
+        new_child.parent = self
+        new_child.level = self.level + 1
+        assert new_child.level <= Node.BOARD_WIDTH + Node.ZOMBIES_PER_EPISODE + 1
+        if new_child.level >= Node.BOARD_WIDTH + Node.ZOMBIES_PER_EPISODE:
+            new_child.is_terminal = True
         return self.children[action]
-
-    def is_equal(self, node):
-        if self.state == node.state:
-            return True
-        else:
-            return False
