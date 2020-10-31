@@ -241,7 +241,7 @@ class BasicMCTSAgent(Agent):
         average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(list_of_results)
 
         # back-prop from the expanded child (the child of the selected node)
-        BasicMCTSAgent.back_propagation(selected_child, average_total_reward, self.temporary_root)
+        BasicMCTSAgent.back_propagation(selected_child, average_total_reward, self.root)
 
     @staticmethod
     def worker(arg):
