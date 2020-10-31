@@ -131,6 +131,7 @@ dmypy.json
 /model/
 /C:/Users/Eliav.Shalelashvili/PycharmProjects/FinalProjectRL/results/*
 /results/*
+/results/old/*
 .gameUtils/
 *.png
 *.pth
