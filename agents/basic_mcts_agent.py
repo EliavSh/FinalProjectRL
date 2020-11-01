@@ -190,7 +190,7 @@ class BasicMCTSAgent(Agent):
         :param actions: list of all possible actions to choose from
         :return: returns the possible children Nodes
         """
-        assert node.num_children == 10 or node.num_children == 0
+        assert node.num_children == len(self.possible_actions) or node.num_children == 0
         if node.num_children == 0:
             for action in actions:
                 _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
@@ -237,6 +237,7 @@ class BasicMCTSAgent(Agent):
             list_of_objects.append(obj)
 
         list_of_results = self.pool.map(BasicMCTSAgent.worker, ((obj, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.BOARD_WIDTH) for obj in list_of_objects))
+        assert np.max(list_of_results) <= self.simulation_depth
 
         average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(list_of_results)
 

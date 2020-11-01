@@ -38,8 +38,8 @@ def main():
 if __name__ == "__main__":
     temp = 1
     if temp == 1:
-        for size in range(10, 40, 10):
-            for exploration_rate in linspace(0.5, 2, 11):
+        for size in range(2, 10, 2):
+            for exploration_rate in linspace(0.0, 4., 11):
                 path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs', 'config.ini')
                 parser = RawConfigParser()
                 parser.read(path)
