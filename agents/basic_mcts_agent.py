@@ -210,8 +210,7 @@ class BasicMCTSAgent(Agent):
         for key, value in node.children.items():
             if value == selected_child:
                 selected_action = key
-        if selected_action is None:
-            selected_action = random.sample(possible_actions, 1)[0]
+        assert selected_child is not None
 
         return selected_action
 
@@ -263,7 +262,7 @@ class BasicMCTSAgent(Agent):
         if agent_type == 'zombie':
             zombie_action = action
             # random sample len(actions) times from light-agent actions-space
-            light_action = np.random.randint(0, BasicMCTSAgent.BOARD_HEIGHT * BasicMCTSAgent.BOARD_WIDTH)
+            light_action = 0  # np.random.randint(0, BasicMCTSAgent.BOARD_HEIGHT * BasicMCTSAgent.BOARD_WIDTH)
         else:
             light_action = action
             # sample n times from zombie-agent actions-space
@@ -273,10 +272,10 @@ class BasicMCTSAgent(Agent):
         total_reward = 0
         new_zombie = Game.create_zombie(zombie_action)
         new_alive_zombies.append(new_zombie)
-        reward, new_alive_zombies = Game.calc_reward_and_move_zombies(new_alive_zombies, light_action)
+        reward, final_alive_zombies = Game.calc_reward_and_move_zombies(new_alive_zombies, light_action)
         total_reward += reward
 
-        return total_reward, new_alive_zombies
+        return total_reward, final_alive_zombies
 
     @staticmethod
     def back_propagation(node, result, root):

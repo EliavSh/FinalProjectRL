@@ -154,14 +154,14 @@ class Game:
                 whether it's time to reset the environment again.
         """
         self.current_time += 1
+        # update display in case of interactive mode
+        if self.interactive_mode:
+            self.update(light_action)
+
         # add new zombie
         new_zombie = Game.create_zombie(zombie_action)
         self.alive_zombies.append(new_zombie)
         self.all_zombies.append(new_zombie)
-
-        # update display in case of interactive mode
-        if self.interactive_mode:
-            self.update(light_action)
 
         # move all zombies one step and calc reward
         reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action)
@@ -176,15 +176,16 @@ class Game:
         :return all alive zombies (haven't step out of the grid)
         """
         # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
-        temp_alive_zombies = list(np.copy(alive_zombies))
+        new_alive_zombies = list(copy.deepcopy(alive_zombies))
         reward = 0
-        for z in alive_zombies:
-            z.move(light_action)
-            if z.x >= Game.BOARD_WIDTH:
-                if Game.keep_alive(z.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
+        indices_to_keep = list(range(len(new_alive_zombies)))
+        for index, zombie in enumerate(new_alive_zombies):
+            zombie.move(light_action)
+            if zombie.x >= Game.BOARD_WIDTH:
+                if Game.keep_alive(zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
-                temp_alive_zombies.remove(z)  # deleting a zombie that reached the border
-        return reward, temp_alive_zombies
+                indices_to_keep.remove(index)  # deleting a zombie that reached the border
+        return reward, list(np.array(new_alive_zombies)[indices_to_keep])
 
     @staticmethod
     def keep_alive(h):
@@ -203,7 +204,7 @@ class Game:
         zombie_grid = self.grid.get_values()
         zombie_grid = zombie_grid.astype(np.float32)
         zombie_grid.fill(0)
-        health_grid = np.copy(zombie_grid)
+        health_grid = copy.deepcopy(zombie_grid)
         for i in self.alive_zombies:
             zombie_grid[int(i.y), int(i.x)] = 1
             health_grid[int(i.y), int(i.x)] = i.hit_points
