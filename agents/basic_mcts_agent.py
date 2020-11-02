@@ -257,7 +257,7 @@ class BasicMCTSAgent(Agent):
         :param action: array containing all the actions to simulate
         :return: total reward of the simulation
         """
-        alive_zombies = list(copy.deepcopy(alive_zombies))  # make a copy of all zombies - we do not want to make any act in real world
+        new_alive_zombies = list(copy.deepcopy(alive_zombies))  # make a copy of all zombies - we do not want to make any act in real world
 
         # set action and light agents actions
         if agent_type == 'zombie':
@@ -272,11 +272,11 @@ class BasicMCTSAgent(Agent):
         # simulate and aggregate reward
         total_reward = 0
         new_zombie = Game.create_zombie(zombie_action)
-        alive_zombies.append(new_zombie)
-        reward, alive_zombies = Game.calc_reward_and_move_zombies(alive_zombies, light_action)
+        new_alive_zombies.append(new_zombie)
+        reward, new_alive_zombies = Game.calc_reward_and_move_zombies(new_alive_zombies, light_action)
         total_reward += reward
 
-        return total_reward, alive_zombies
+        return total_reward, new_alive_zombies
 
     @staticmethod
     def back_propagation(node, result, root):

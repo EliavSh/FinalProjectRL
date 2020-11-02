@@ -19,7 +19,7 @@ class CostlySimulation:
         for __ in range(self.simulation_depth):
             # select and execute next action (taken from simulation node)
             action = self.select_simulation_action()
-            one_step_reward, simulation_state = self.simulate_action(simulation_state, action, height, width)
+            one_step_reward, simulation_state = self.simulate_step(simulation_state, action, height, width)
             # aggregate reward
             simulation_reward += one_step_reward
         return simulation_reward
@@ -29,7 +29,7 @@ class CostlySimulation:
         i = random.sample(self.possible_actions, 1)[0]
         return i
 
-    def simulate_action(self, simulation_state, action, height, width):
+    def simulate_step(self, simulation_state, action, height, width):
         alive_zombies = list(copy.deepcopy(simulation_state))  # make a copy of all zombies - we do not want to make any act in real world
 
         # set action and light agents actions
