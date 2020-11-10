@@ -156,8 +156,10 @@ class BasicMCTSAgent(Agent):
         :return: highest UCT valued child
         """
         selected_child = node
+
         if node.num_children == 0:
             return node
+
         max_weight = 0.0
         possible_children = []
         for child in list(filter(None, node.children.values())):

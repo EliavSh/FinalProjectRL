@@ -3,6 +3,7 @@ import shutil
 
 from numpy import linspace
 
+
 dir_name = "800_episodes"
 
 # create rewards dir
@@ -12,6 +13,7 @@ if not os.path.exists(path):
     os.chmod(path, 777)
 
 str_arr = []
+
 for size in range(2, 10, 2):
     for exploration_rate in linspace(0.0, 4., 11):
         str_arr.append('board_' + str(size) + '_exploration_' + str(round(exploration_rate, 2)))

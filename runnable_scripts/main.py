@@ -13,9 +13,7 @@ def main():
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "true"  # cancel py-game display
     from environment.game import Game
     from agents.constant_agent import ConstantAgent
-    from agents.ddqn_agent import DdqnAgent
     from agents.basic_mcts_agent import BasicMCTSAgent
-    from agents.random_agent import RandomAgent
     from runnable_scripts.Utils import create_dir, ridge_plot, save_ini_file
 
     # create directory for storing the results
@@ -32,7 +30,7 @@ def main():
     save_ini_file(dir_path, results_file_name, steps_dict_light, steps_dict_zombie, episodes_dict)
     ridge_plot(dir_path, results_file_name + '.xlsx')
 
-    print('eliav king')
+    print('Eliav king')
 
 
 if __name__ == "__main__":
