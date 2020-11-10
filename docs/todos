@@ -1,0 +1,21 @@
+parralelize the simulations
+remove all uses of device
+why the maximum level doesn't match
+
+More thoretical stuff:
+building a pretrained agents insted of the current model based framework
+
+
+questions:
+1. what should i do with the reward i get every turn in the game?
+2. how should i backpropagate rewards
+3. why # select next action is done before all phases of mcts?! I've changed it to happen after.
+
+TODO:
+1. learning only at the end of an episode - or terminal point
+1.1 Real episode - aggregate learning reward and backpropagte only at the end of an episode
+1.2 Simulated episode - back-prop at the end of each simulation
+*** simulate until a terminal node reached!!!
+2. number of steps should be nu,ber of zombies plus the width - FIX IT!!!
+3. # TODO - one can say in the simulations that: lets save the one_step_reward in the last node and spare the reward calculation in case we already been there
+3.1 OR - lets not append any simulated node - just increment to calculate the total reward - CHOSEN

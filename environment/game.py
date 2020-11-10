@@ -14,16 +14,25 @@ from runnable_scripts.Utils import get_config, plot_progress
 from itertools import count
 import torch
 
-MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
-MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
-BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+
+def update_variables():
+    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
+    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
+    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
+    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
+    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+    return MAX_HIT_POINTS, MAX_ANGLE, MAX_VELOCITY, BOARD_WIDTH, BOARD_HEIGHT
 
 
 class Game:
+    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
+    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
+    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
+    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
+    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
 
     def __init__(self, device, agent_zombie, agent_light):
+        Game.MAX_HIT_POINTS, Game.MAX_ANGLE, Game.MAX_VELOCITY, Game.BOARD_WIDTH, Game.BOARD_HEIGHT = update_variables()
         main_info = get_config("MainInfo")
         self.grid = GameGrid()
         self.light_size = int(main_info['light_size'])
@@ -45,11 +54,11 @@ class Game:
         self.agent_zombie = agent_zombie(device, 'zombie')
         self.agent_light = agent_light(device, 'light')
         # load main info
-        self.steps_per_episodes = float(main_info['zombies_per_episode']) + int(main_info['board_width']) + 2
+        self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width']) - 1
         self.check_point = int(main_info['check_point'])
         self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
         # other fields
-        self.max_hit_points = MAX_HIT_POINTS
+        self.max_hit_points = Game.MAX_HIT_POINTS
         self.current_time = 0
         self.alive_zombies = []  # list of the currently alive zombies
         self.all_zombies = []  # list of all zombies (from all time)
@@ -95,7 +104,7 @@ class Game:
                 steps_dict_zombie['action'].append(int(action_zombie))
                 steps_dict_zombie['step'].append(time_step)
 
-                reward = self.apply_actions(self.start_positions[action_zombie], action_light)
+                reward = self.apply_actions(action_zombie, action_light)
                 zombie_master_reward += reward
                 next_state_zombie, next_state_light = self.get_state()
 
@@ -145,20 +154,20 @@ class Game:
                 whether it's time to reset the environment again.
         """
         self.current_time += 1
+        # update display in case of interactive mode
+        if self.interactive_mode:
+            self.update(light_action)
+
         # add new zombie
         new_zombie = Game.create_zombie(zombie_action)
         self.alive_zombies.append(new_zombie)
         self.all_zombies.append(new_zombie)
 
-        # update display in case of interactive mode
-        if self.interactive_mode:
-            self.update(light_action)
-
         # move all zombies one step and calc reward
         reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action)
 
         self.done = self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
-        return torch.tensor([reward], device=self.device)
+        return reward
 
     @staticmethod
     def calc_reward_and_move_zombies(alive_zombies, light_action):
@@ -167,19 +176,20 @@ class Game:
         :return all alive zombies (haven't step out of the grid)
         """
         # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
-        temp_alive_zombies = list(np.copy(alive_zombies))
+        new_alive_zombies = list(copy.deepcopy(alive_zombies))
         reward = 0
-        for z in alive_zombies:
-            z.move(light_action)
-            if z.x >= BOARD_WIDTH:
-                if Game.keep_alive(z.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
+        indices_to_keep = list(range(len(new_alive_zombies)))
+        for index, zombie in enumerate(new_alive_zombies):
+            zombie.move(light_action)
+            if zombie.x >= Game.BOARD_WIDTH:
+                if Game.keep_alive(zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
-                temp_alive_zombies.remove(z)  # deleting a zombie that reached the border
-        return reward, temp_alive_zombies
+                indices_to_keep.remove(index)  # deleting a zombie that reached the border
+        return reward, list(np.array(new_alive_zombies)[indices_to_keep])
 
     @staticmethod
     def keep_alive(h):
-        if h >= MAX_HIT_POINTS:  # if the zombie sustained a lot of damaged
+        if h >= Game.MAX_HIT_POINTS:  # if the zombie sustained a lot of damaged
             return False
         else:  # else decide by the sine function -> if the result is greater than 0.5 -> keep alive, else -> kill it (no reward for the zombie master)
             """
@@ -188,13 +198,13 @@ class Game:
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
-            return np.power(h / MAX_HIT_POINTS, 1 / 3) < random.random()
+            return np.power(h / Game.MAX_HIT_POINTS, 1 / 3) < random.random()
 
     def get_state(self):
         zombie_grid = self.grid.get_values()
         zombie_grid = zombie_grid.astype(np.float32)
         zombie_grid.fill(0)
-        health_grid = np.copy(zombie_grid)
+        health_grid = copy.deepcopy(zombie_grid)
         for i in self.alive_zombies:
             zombie_grid[int(i.y), int(i.x)] = 1
             health_grid[int(i.y), int(i.x)] = i.hit_points
@@ -205,11 +215,11 @@ class Game:
 
     @staticmethod
     def create_zombie(position):
-        if MAX_ANGLE == 0:
-            angle = MAX_ANGLE
+        if Game.MAX_ANGLE == 0:
+            angle = Game.MAX_ANGLE
         else:
-            angle = random.uniform(-MAX_ANGLE, MAX_ANGLE)
-        return Zombie(angle, MAX_VELOCITY, position)
+            angle = random.uniform(-Game.MAX_ANGLE, Game.MAX_ANGLE)
+        return Zombie(angle, Game.MAX_VELOCITY, position)
 
     def set_up(self):
         # get images

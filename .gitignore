@@ -129,4 +129,9 @@ dmypy.json
 .pyre/
 /.ipynb_checkpoints/
 /model/
-/results/
+/C:/Users/Eliav.Shalelashvili/PycharmProjects/FinalProjectRL/results/*
+/results/*
+/results/old/*
+.gameUtils/
+*.png
+*.pth
