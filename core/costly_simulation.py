@@ -36,7 +36,7 @@ class CostlySimulation:
         if self.agent_type == 'zombie':
             zombie_action = action
             # random sample len(actions) times from light-agent actions-space
-            light_action = 0  # np.random.randint(0, height * width)
+            light_action = np.random.randint(0, height * width)
         else:
             light_action = action
             # sample n times from zombie-agent actions-space

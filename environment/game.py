@@ -104,7 +104,7 @@ class Game:
                 steps_dict_zombie['action'].append(int(action_zombie))
                 steps_dict_zombie['step'].append(time_step)
 
-                reward = self.apply_actions(self.start_positions[action_zombie], action_light)
+                reward = self.apply_actions(action_zombie, action_light)
                 zombie_master_reward += reward
                 next_state_zombie, next_state_light = self.get_state()
 

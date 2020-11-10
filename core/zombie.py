@@ -1,7 +1,15 @@
+import math
+
 import numpy as np
 from runnable_scripts.Utils import get_config
 
 HEAL_EPSILON = 0.01
+
+
+def calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE):
+    zombie_home_length = int(BOARD_HEIGHT - 2 * BOARD_WIDTH * math.tan(ANGLE))
+    zombie_home_start_pos = int(BOARD_HEIGHT - zombie_home_length - BOARD_WIDTH * math.tan(ANGLE))  # m-n-b
+    return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), BOARD_WIDTH)
 
 
 class Zombie:
@@ -11,6 +19,8 @@ class Zombie:
         Zombie.BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
         Zombie.LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
         Zombie.DT = int(get_config("MainInfo")['dt'])
+        Zombie.ANGLE = float(get_config("MainInfo")['max_angle'])
+        Zombie.START_POSITIONS = calculate_start_positions(Zombie.BOARD_WIDTH, Zombie.BOARD_HEIGHT, Zombie.ANGLE)
 
     # static field
     ZOMBIE_NUM = 1
@@ -18,6 +28,8 @@ class Zombie:
     BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
     LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
     DT = int(get_config("MainInfo")['dt'])
+    ANGLE = float(get_config("MainInfo")['max_angle'])
+    START_POSITIONS = calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE)
 
     def __init__(self, angle, velocity, state):
         """
@@ -34,7 +46,7 @@ class Zombie:
         # x,y are the real coordinates of the zombie
         self.x = 0  # every zombie starts at the left side
         self.v_x = self.velocity * np.cos(self.angle)
-        self.y = state / Zombie.BOARD_WIDTH  # every zombie starts in an arbitrary positions by some distribution
+        self.y = Zombie.START_POSITIONS[state] / Zombie.BOARD_WIDTH  # every zombie starts in an arbitrary positions by some distribution
         self.v_y = self.velocity * np.sin(self.angle)
         self.current_state = state
         # self.history = [(self.env.current_time, int(self.current_state[0]))]  # tuples of (timestamp, pos)

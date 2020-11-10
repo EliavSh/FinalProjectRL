@@ -206,11 +206,16 @@ class BasicMCTSAgent(Agent):
         :return: the selected action
         """
         selected_child = self.select_best_child(node)
-        selected_action = None
-        for key, value in node.children.items():
-            if value == selected_child:
-                selected_action = key
         assert selected_child is not None
+
+        selected_action = None
+        if selected_child == node:
+            selected_action = random.sample(self.possible_actions, 1)[0]
+        else:
+            for key, value in node.children.items():
+                if value == selected_child:
+                    selected_action = key
+        assert selected_action is not None
 
         return selected_action
 
