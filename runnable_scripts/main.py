@@ -36,14 +36,15 @@ def main():
 if __name__ == "__main__":
     temp = 1
     if temp == 1:
-        for size in range(10, 40, 10):
-            for exploration_rate in linspace(0.5, 2, 11):
+        for size in range(2, 10, 2):
+            for exploration_rate in linspace(0.0, 4., 21):
                 path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs', 'config.ini')
                 parser = RawConfigParser()
                 parser.read(path)
                 parser.set('TreeAgentInfo', 'exploration_const', str(exploration_rate))
                 parser.set('MainInfo', 'board_height', str(size))
-                parser.set('MainInfo', 'board_width', str(size // 2))
+                parser.set('MainInfo', 'board_width', str(size//2))
+                parser.set('MainInfo', 'light_size', str(size//2))
                 config_file = open(path, 'w')
                 parser.write(config_file, space_around_delimiters=True)
                 config_file.close()

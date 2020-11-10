@@ -19,7 +19,7 @@ class CostlySimulation:
         for __ in range(self.simulation_depth):
             # select and execute next action (taken from simulation node)
             action = self.select_simulation_action()
-            one_step_reward, simulation_state = self.simulate_action(simulation_state, action, height, width)
+            one_step_reward, simulation_state = self.simulate_step(simulation_state, action, height, width)
             # aggregate reward
             simulation_reward += one_step_reward
         return simulation_reward
@@ -29,7 +29,7 @@ class CostlySimulation:
         i = random.sample(self.possible_actions, 1)[0]
         return i
 
-    def simulate_action(self, simulation_state, action, height, width):
+    def simulate_step(self, simulation_state, action, height, width):
         alive_zombies = list(copy.deepcopy(simulation_state))  # make a copy of all zombies - we do not want to make any act in real world
 
         # set action and light agents actions
@@ -69,21 +69,22 @@ class CostlySimulation:
         return reward, temp_alive_zombies
 
     def keep_alive(self, h):
+        eliav = self.simulation_depth
         if h >= Game.MAX_HIT_POINTS:  # if the zombie sustained a lot of damaged
             return False
         else:  # else decide by the sine function -> if the result is greater than 0.5 -> keep alive, else -> kill it (no reward for the zombie master)
             """
             the idea is: if the hit points is close to 3 then the result is close to 1 ->
-             -> there is small chance for keeping him alive and therefor rewarding the zombie with positive reward
+             -> there is small chance for keeping him alive and therefore rewarding the zombie with positive reward
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
             return np.power(h / Game.MAX_HIT_POINTS, 1 / 3) < random.random()
 
     def create_zombie(self, position):
+        eliav = self.simulation_depth
         if Game.MAX_ANGLE == 0:
             angle = Game.MAX_ANGLE
         else:
             angle = random.uniform(-Game.MAX_ANGLE, Game.MAX_ANGLE)
         return Zombie(angle, Game.MAX_VELOCITY, position)
-
