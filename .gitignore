@@ -133,5 +133,3 @@ dmypy.json
 /results/*
 /results/old/*
 .gameUtils/
-*.png
-*.pth
