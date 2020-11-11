@@ -132,4 +132,4 @@ dmypy.json
 /C:/Users/Eliav.Shalelashvili/PycharmProjects/FinalProjectRL/results/*
 /results/*
 /results/old/*
-.gameUtils/
+/gameUtils/*
