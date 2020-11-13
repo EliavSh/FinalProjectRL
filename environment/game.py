@@ -222,21 +222,26 @@ class Game:
         return Zombie(angle, Game.MAX_VELOCITY, position)
 
     def set_up(self):
+        # create the gameUtils directory if doesn't exist
+        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "gameUtils")
+        if not os.path.exists(path):
+            os.mkdir(path)
+            os.chmod(path, 777)
         # get images
-        zombie_image = Image.open('../gameUtils/zombie.png')
-        light_image = Image.open('../gameUtils/light.png')
+        zombie_image = Image.open(os.path.join(path, 'zombie.png'))
+        light_image = Image.open(os.path.join(path, 'light.png'))
         # resize (light_image is doubled for 2x2 cells)
         zombie_image = zombie_image.resize((int(self.display_width / self.grid.get_width()), int(self.display_height / self.grid.get_height())), 0)
         light_image = light_image.resize(
             (int(self.display_width / self.grid.get_width()) * self.light_size, int(self.display_height / self.grid.get_height()) * self.light_size), 0)
         # save
-        zombie_image.save('../gameUtils/zombie_image.png')
-        light_image.save('../gameUtils/light_image.png')
+        zombie_image.save(os.path.join(path, 'zombie.png'))
+        light_image.save(os.path.join(path, 'light.png'))
         # draw and save the grid
         self.draw_grid()
         # return the images in the pygame format
-        return pygame.image.load('../gameUtils/zombie_image.PNG'), pygame.image.load('../gameUtils/light_image.PNG'), pygame.image.load(
-            '../gameUtils/grid.jpeg')
+        return pygame.image.load(os.path.join(path, 'zombie.PNG')), pygame.image.load(os.path.join(path, 'light.PNG')), pygame.image.load(
+            os.path.join(path, 'grid.jpeg'))
 
     def update(self, light_action):
         event = pygame.event.get()
@@ -264,7 +269,9 @@ class Game:
         pygame.draw.rect(self.game_display, (0, 200, 50), [0, int((min(self.start_positions))) / self.grid.get_width() * y_adjustment, 10,
                                                            int((max(self.start_positions) + np.diff(self.start_positions)[0] - min(
                                                                self.start_positions))) / self.grid.get_width() * y_adjustment])
-        pygame.image.save(self.game_display, '../gameUtils/grid.jpeg')
+
+        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "gameUtils")
+        pygame.image.save(self.game_display,  os.path.join(path, 'grid.jpeg'))
 
     def end_game(self):
         pygame.quit()
