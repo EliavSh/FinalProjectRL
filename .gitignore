@@ -135,4 +135,3 @@ dmypy.json
 /gameUtils/*
 !/gameUtils/zombie.png
 !/gameUtils/light.png
-!/gameUtils/grid.jpeg
