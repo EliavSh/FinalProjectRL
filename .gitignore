@@ -133,3 +133,6 @@ dmypy.json
 /results/*
 /results/old/*
 /gameUtils/*
+!/gameUtils/zombie.png
+!/gameUtils/light.png
+!/gameUtils/grid.jpeg
