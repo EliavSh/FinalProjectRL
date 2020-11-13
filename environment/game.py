@@ -235,12 +235,12 @@ class Game:
         light_image = light_image.resize(
             (int(self.display_width / self.grid.get_width()) * self.light_size, int(self.display_height / self.grid.get_height()) * self.light_size), 0)
         # save
-        zombie_image.save(os.path.join(path, 'zombie.png'))
-        light_image.save(os.path.join(path, 'light.png'))
+        zombie_image.save(os.path.join(path, 'zombie_image.png'))
+        light_image.save(os.path.join(path, 'light_image.png'))
         # draw and save the grid
         self.draw_grid()
         # return the images in the pygame format
-        return pygame.image.load(os.path.join(path, 'zombie.PNG')), pygame.image.load(os.path.join(path, 'light.PNG')), pygame.image.load(
+        return pygame.image.load(os.path.join(path, 'zombie_image.PNG')), pygame.image.load(os.path.join(path, 'light_image.PNG')), pygame.image.load(
             os.path.join(path, 'grid.jpeg'))
 
     def update(self, light_action):
