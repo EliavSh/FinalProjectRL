@@ -42,6 +42,7 @@ def create_networks(device, agent_type, possible_actions):
 class DdqnAgent(Agent):
 
     def __init__(self, device, agent_type):
+        super().__init__(strategy=EpsilonGreedyStrategy(), agent_type=agent_type)  # use the 'EpsilonGreedyStrategy' strategy
         # load values from config
         ddqn_info = get_config('DdqnAgentInfo')
         self.batch_size = int(ddqn_info['batch_size'])
@@ -50,13 +51,12 @@ class DdqnAgent(Agent):
         self.target_update = int(ddqn_info['target_update'])
         self.lr = float(ddqn_info['lr'])
         # init networks
-        self.num_actions, self.target_net, self.policy_net = create_networks(device, agent_type, super().possible_actions)
+        self.num_actions, self.target_net, self.policy_net = create_networks(device, agent_type, self.possible_actions)
         # other fields
         self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=self.lr)
         self.memory = ReplayMemory()
         self.current_step = 0
         self.device = device
-        super().__init__(strategy=EpsilonGreedyStrategy(), agent_type=agent_type)  # use the 'EpsilonGreedyStrategy' strategy
 
     def select_action(self, state):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)

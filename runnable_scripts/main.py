@@ -13,14 +13,16 @@ def main():
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "true"  # cancel py-game display
     from environment.game import Game
     from agents.constant_agent import ConstantAgent
-    from agents.basic_mcts_agent import BasicMCTSAgent
+    from agents.ddqn_agent import DdqnAgent
+    from agents.double_constant_agent import DoubleConstantAgent
+    from agents.random_agent import RandomAgent
     from runnable_scripts.Utils import create_dir, ridge_plot, save_ini_file
 
     # create directory for storing the results
     dir_path = create_dir()
 
     # create the game with the required agents
-    env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=BasicMCTSAgent, agent_light=ConstantAgent)
+    env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=DoubleConstantAgent, agent_light=RandomAgent)
 
     # play the game and produce the dictionaries of the results
     episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)
