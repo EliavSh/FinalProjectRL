@@ -23,14 +23,14 @@ def extract_tensors(experiences):
     return t1, t2, t3, t4
 
 
-def create_networks(device, agent_type):
+def create_networks(device, agent_type, possible_actions):
     main_info = get_config('MainInfo')
     h = int(main_info['board_height'])
     w = int(main_info['board_width'])
     # create networks
     neurons_number = h * w if agent_type == 'light' else h * w / 2
     input_size = 2 * h * w if agent_type == 'light' else h * w  # the light agents get extra information
-    num_actions = h * w if agent_type == 'light' else h
+    num_actions = len(possible_actions)
     target_net = DQN(input_size, num_actions, neurons_number).to(device)
     policy_net = DQN(input_size, num_actions, neurons_number).to(device)
     # set up target network as the same weights
@@ -50,7 +50,7 @@ class DdqnAgent(Agent):
         self.target_update = int(ddqn_info['target_update'])
         self.lr = float(ddqn_info['lr'])
         # init networks
-        self.num_actions, self.target_net, self.policy_net = create_networks(device, agent_type)
+        self.num_actions, self.target_net, self.policy_net = create_networks(device, agent_type, super().possible_actions)
         # other fields
         self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=self.lr)
         self.memory = ReplayMemory()

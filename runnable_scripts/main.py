@@ -34,7 +34,7 @@ def main():
 
 
 if __name__ == "__main__":
-    temp = 1
+    temp = 2
     if temp == 1:
         for size in range(2, 10, 2):
             for exploration_rate in linspace(0.0, 4., 21):

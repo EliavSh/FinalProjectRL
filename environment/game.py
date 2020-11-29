@@ -1,4 +1,5 @@
 import copy
+import sys
 import time
 import os
 import pygame
@@ -17,7 +18,7 @@ import torch
 
 def update_variables():
     MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
+    MAX_ANGLE = int(get_config("MainInfo")['max_angle']) * math.pi / 180
     MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
     BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
     BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
@@ -26,7 +27,7 @@ def update_variables():
 
 class Game:
     MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
+    MAX_ANGLE = int(get_config("MainInfo")['max_angle']) * math.pi / 180
     MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
     BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
     BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
@@ -38,6 +39,9 @@ class Game:
         self.light_size = int(main_info['light_size'])
         self.max_angle = int(main_info['max_angle'])
         self.start_positions = self.calculate_start_positions()
+        if len(self.start_positions) == 0:
+            print("The angle is too wide!")
+            sys.exit()
         # set interactive mode
         self.interactive_mode = main_info.getboolean('interactive_mode')
         if self.interactive_mode:
@@ -185,6 +189,8 @@ class Game:
                 if Game.keep_alive(zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
                 indices_to_keep.remove(index)  # deleting a zombie that reached the border
+            if zombie.y >= Game.BOARD_HEIGHT:
+                indices_to_keep.remove(index)
         return reward, list(np.array(new_alive_zombies)[indices_to_keep])
 
     @staticmethod
