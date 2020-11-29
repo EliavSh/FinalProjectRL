@@ -69,8 +69,8 @@ class Game:
         self.done = False
 
     def calculate_start_positions(self):
-        zombie_home_length = int(self.grid.get_height() - 2 * self.grid.get_width() * math.tan(self.max_angle))
-        zombie_home_start_pos = int(self.grid.get_height() - zombie_home_length - self.grid.get_width() * math.tan(self.max_angle))  # m-n-b
+        zombie_home_length = int(self.grid.get_height() - 2 * self.grid.get_width() * math.tan(self.max_angle * math.pi / 180))
+        zombie_home_start_pos = int(self.grid.get_height() - zombie_home_length - self.grid.get_width() * math.tan(self.max_angle * math.pi / 180))  # m-n-b
         return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), self.grid.get_width())
 
     def reset(self):
@@ -271,7 +271,7 @@ class Game:
                                                                self.start_positions))) / self.grid.get_width() * y_adjustment])
 
         path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "gameUtils")
-        pygame.image.save(self.game_display,  os.path.join(path, 'grid.jpeg'))
+        pygame.image.save(self.game_display, os.path.join(path, 'grid.jpeg'))
 
     def end_game(self):
         pygame.quit()
