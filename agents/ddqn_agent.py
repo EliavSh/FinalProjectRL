@@ -82,7 +82,7 @@ class DdqnAgent(Agent):
             next_q_values = QValues.get_next(self.target_net, next_states, self.policy_net)
             target_q_values = (next_q_values * self.gamma) + rewards
 
-            loss = F.mse_loss(current_q_values, target_q_values)
+            loss = F.mse_loss(current_q_values, target_q_values).to(self.device)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
