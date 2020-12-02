@@ -39,7 +39,7 @@ class Game:
         self.light_size = int(main_info['light_size'])
         self.max_angle = int(main_info['max_angle'])
         self.start_positions = self.calculate_start_positions()
-        if len(self.start_positions) == 0:
+        if len(self.start_positions) < 2:
             print("The angle is too wide!")
             sys.exit()
         # set interactive mode
@@ -185,12 +185,12 @@ class Game:
         indices_to_keep = list(range(len(new_alive_zombies)))
         for index, zombie in enumerate(new_alive_zombies):
             zombie.move(light_action)
-            if zombie.x >= Game.BOARD_WIDTH:
+            if 0 >= zombie.y or zombie.y >= Game.BOARD_HEIGHT:
+                indices_to_keep.remove(index)
+            elif zombie.x >= Game.BOARD_WIDTH:
                 if Game.keep_alive(zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
                 indices_to_keep.remove(index)  # deleting a zombie that reached the border
-            if zombie.y >= Game.BOARD_HEIGHT:
-                indices_to_keep.remove(index)
         return reward, list(np.array(new_alive_zombies)[indices_to_keep])
 
     @staticmethod

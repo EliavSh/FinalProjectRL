@@ -20,7 +20,7 @@ def main():
     dir_path = create_dir()
 
     # create the game with the required agents
-    env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=DdqnAgent, agent_light=ConstantAgent)
+    env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=ConstantAgent, agent_light=DdqnAgent)
 
     # play the game and produce the dictionaries of the results
     episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)
@@ -34,7 +34,7 @@ def main():
 
 
 if __name__ == "__main__":
-    temp = 1
+    temp = 2
     if temp == 1:
         for size in range(2, 10, 2):
             for exploration_rate in linspace(0.0, 4., 21):
