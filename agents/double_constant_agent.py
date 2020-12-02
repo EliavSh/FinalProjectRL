@@ -20,8 +20,6 @@ class DoubleConstantAgent(Agent):
 
         super(DoubleConstantAgent, self).__init__(EpsilonGreedyStrategy(), agent_type)
         self.current_step = 0
-        self.possible_actions = list(range(DoubleConstantAgent.BOARD_HEIGHT)) if self.agent_type == 'zombie' else list(
-            range(DoubleConstantAgent.BOARD_HEIGHT * DoubleConstantAgent.BOARD_WIDTH))
 
     def select_action(self, state):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
