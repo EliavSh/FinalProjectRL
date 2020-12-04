@@ -12,7 +12,7 @@ class Net(torch.nn.Module):
             torch.nn.Linear(in_features=neurons_number, out_features=neurons_number),
             torch.nn.Linear(in_features=neurons_number, out_features=outputs),
             torch.nn.LeakyReLU(0.1)
-            ]
+        ]
         self.net = torch.nn.ModuleList(modules)
 
     def forward(self, inputs):
@@ -32,8 +32,6 @@ class DQN(nn.Module):
             self.net = torch.nn.DataParallel(self.net)
             print('Model:', type(self.net))
             print('Devices:', self.net.device_ids)
-
-
 
     def forward(self, x):
         x = self.net.forward(x)
