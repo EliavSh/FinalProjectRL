@@ -22,7 +22,6 @@ class ConstantAgent(Agent):
 
         super(ConstantAgent, self).__init__(EpsilonGreedyStrategy(), agent_type)
         self.current_step = 0
-        self.possible_actions = list(range(ConstantAgent.BOARD_HEIGHT)) if self.agent_type == 'zombie' else list(range(ConstantAgent.BOARD_HEIGHT * ConstantAgent.BOARD_WIDTH))
         self.constant_action = ConstantAgent.CONST_ACTION
 
     def select_action(self, state):

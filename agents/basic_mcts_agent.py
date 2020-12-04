@@ -31,9 +31,9 @@ class BasicMCTSAgent(Agent):
     C = float(get_config("TreeAgentInfo")['exploration_const'])
 
     def __init__(self, device, agent_type):
-        BasicMCTSAgent.MAX_HIT_POINTS, BasicMCTSAgent.MAX_ANGLE, BasicMCTSAgent.MAX_VELOCITY, BasicMCTSAgent.BOARD_WIDTH, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.C = update_variables()
+        BasicMCTSAgent.MAX_HIT_POINTS, BasicMCTSAgent.MAX_ANGLE, BasicMCTSAgent.MAX_VELOCITY, \
+            BasicMCTSAgent.BOARD_WIDTH, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.C = update_variables()
         super().__init__(EpsilonGreedyStrategy(), agent_type)
-        self.possible_actions = list(range(Game.BOARD_HEIGHT)) if self.agent_type == 'zombie' else list(range(Game.BOARD_HEIGHT * Game.BOARD_WIDTH))
         self.root = Node([], self.possible_actions)
         self.temporary_root = self.root  # TODO - change its name to something like: real world state-node
         self.current_step = 0
@@ -242,10 +242,13 @@ class BasicMCTSAgent(Agent):
             obj = CostlySimulation(self.simulation_depth, simulation_state, self.possible_actions, self.agent_type)
             list_of_objects.append(obj)
 
-        list_of_results = self.pool.map(BasicMCTSAgent.worker, ((obj, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.BOARD_WIDTH) for obj in list_of_objects))
+        list_of_results = self.pool.map(BasicMCTSAgent.worker,
+                                        ((obj, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.BOARD_WIDTH) for obj in
+                                         list_of_objects))
         assert np.max(list_of_results) <= self.simulation_depth
 
-        average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(list_of_results)
+        average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(
+            list_of_results)
 
         # back-prop from the expanded child (the child of the selected node)
         BasicMCTSAgent.back_propagation(selected_child, average_total_reward, self.root)
@@ -263,7 +266,8 @@ class BasicMCTSAgent(Agent):
         :param action: array containing all the actions to simulate
         :return: total reward of the simulation
         """
-        new_alive_zombies = list(copy.deepcopy(alive_zombies))  # make a copy of all zombies - we do not want to make any act in real world
+        new_alive_zombies = list(
+            copy.deepcopy(alive_zombies))  # make a copy of all zombies - we do not want to make any act in real world
 
         # set action and light agents actions
         if agent_type == 'zombie':
