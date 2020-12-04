@@ -7,8 +7,8 @@ HEAL_EPSILON = 0.01
 
 
 def calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE):
-    zombie_home_length = int(BOARD_HEIGHT - 2 * BOARD_WIDTH * math.tan(ANGLE))
-    zombie_home_start_pos = int(BOARD_HEIGHT - zombie_home_length - BOARD_WIDTH * math.tan(ANGLE))  # m-n-b
+    zombie_home_length = int(BOARD_HEIGHT - 2 * BOARD_WIDTH * math.tan(math.pi * ANGLE / 180))
+    zombie_home_start_pos = int(BOARD_HEIGHT - zombie_home_length - BOARD_WIDTH * math.tan(math.pi * ANGLE / 180))  # m-n-b
     return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), BOARD_WIDTH)
 
 
