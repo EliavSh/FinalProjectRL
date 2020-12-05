@@ -15,7 +15,7 @@ class Arena():
     An Arena class where any 2 agents can be pit against each other.
     """
 
-    def __init__(self, player1, player2, possible_actions, agent_type, display=None):
+    def __init__(self, player1, player2, possible_actions, agent_type):
         """
         Input:
             player 1,2: two functions that takes board as input, return action
@@ -31,7 +31,6 @@ class Arena():
         self.player2 = player2
         self.possible_actions = possible_actions
         self.agent_type = agent_type
-        self.display = display
         self.main_info = get_config("MainInfo")
 
     def playGame(self, player, verbose=False):
@@ -44,16 +43,11 @@ class Arena():
             or
                 draw result returned from the game that is neither 1, -1, nor 0.
         """
-        curPlayer = 1
-        board = self.get_starting_state()
+        board = self.get_starting_state()[0] if self.agent_type == 'zombie' else self.get_starting_state()[1]
         it = 0
         total_reward = 0
-        while it > int(self.main_info['zombies_per_episode']) + int(self.main_info['board_width']) - 1:
+        while it < int(self.main_info['zombies_per_episode']) + int(self.main_info['board_width']) - 1:
             it += 1
-            if verbose:
-                assert self.display
-                print("Turn ", str(it), "Player ", str(curPlayer))
-                self.display(board)
             action = player(board)
 
             valids = np.ones((len(self.possible_actions)), dtype=int)
@@ -64,10 +58,6 @@ class Arena():
                 assert valids[action] > 0
             board, reward = Game.get_next_state(board, self.agent_type, action)
             total_reward += reward
-        if verbose:
-            assert self.display
-            print("Game over: Turn ", str(it), "Result: ", str(total_reward))
-            self.display(board)
         return total_reward
 
     def playGames(self, num, verbose=False):
@@ -89,7 +79,11 @@ class Arena():
         for _ in tqdm(range(num), desc="Arena.playGames (2)"):
             two_rewards.append(self.playGame(self.player2, verbose=verbose))
 
-        return sum(one_rewards > two_rewards), sum(two_rewards > one_rewards)
+        return self.get_total_wins(one_rewards, two_rewards), self.get_total_wins(two_rewards, one_rewards)
+
+    @staticmethod
+    def get_total_wins(rewards1, rewards2):
+        return sum(list(map(lambda x, y: x > y, rewards1, rewards2)))
 
     @staticmethod
     def get_starting_state():

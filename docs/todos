@@ -19,3 +19,8 @@ TODO:
 2. number of steps should be nu,ber of zombies plus the width - FIX IT!!!
 3. # TODO - one can say in the simulations that: lets save the one_step_reward in the last node and spare the reward calculation in case we already been there
 3.1 OR - lets not append any simulated node - just increment to calculate the total reward - CHOSEN
+
+git ignore:
+git rm -r --cached .
+git add .
+git commit -m ".gitignore is now working"
