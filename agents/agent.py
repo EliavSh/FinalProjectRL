@@ -29,7 +29,7 @@ class Agent:
         self.agent_type = agent_type
         self.strategy = strategy
         self.possible_actions = list(range(len(calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT,
-                                                          Agent.ANGLE)))) if agent_type == "zombie" else list(
+                                                                         Agent.ANGLE)))) if agent_type == "zombie" else list(
             range(Agent.BOARD_HEIGHT * Agent.BOARD_WIDTH))
 
     @abstractmethod
@@ -40,9 +40,12 @@ class Agent:
     def learn(self, state, action, next_state, reward):
         raise NotImplementedError
 
+    @abstractmethod
     def reset(self):
         raise NotImplementedError
 
     def reset_start_pos(self):
         Agent.update_variables()
-        self.possible_actions = calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT, Agent.ANGLE)
+        self.possible_actions = list(
+            range(len(calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT, Agent.ANGLE)))) if self.agent_type == "zombie" else list(
+            range(Agent.BOARD_HEIGHT * Agent.BOARD_WIDTH))

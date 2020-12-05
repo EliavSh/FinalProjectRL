@@ -5,10 +5,11 @@ from core.qValues import QValues
 import torch.nn.functional as F
 from agents.agent import Agent
 import torch.optim as optim
-from core.DQN import DQN
+from core.neuralNets.DQN import DQN
 import random
 import torch
 from runnable_scripts.Utils import get_config
+import numpy as np
 
 
 def extract_tensors(experiences):
@@ -59,20 +60,38 @@ class DdqnAgent(Agent):
         self.device = device
 
     def select_action(self, state):
+
+        state = torch.from_numpy(state).flatten().unsqueeze(0)
+
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
         random_number = random.random()
         if rate > random_number:
+
+            # take an action whom one of the zombies locations
+            x = np.array(state)
+            z = np.argwhere(x[0:int(len(x) / 2)] > 0)
+            y = np.resize(z, len(z))
+            if len(y) == 0:
+                action = random.randrange(self.num_actions)
+            else:
+                action = random.sample(list(y), 1)[0]
+
             action = random.randrange(self.num_actions)
+
             return action, rate, self.current_step  # explore
         else:
             with torch.no_grad():
                 # here we are getting the action from one pass along the network. after that we:
                 # convert the tensor to data, then move to cpu using then converting to numpy and lastly, wrapping back to tensor
-                action = self.policy_net(state).argmax(dim=0).data.to(self.device).numpy()[0]  # max over rows! (dim=0)
+                action = self.policy_net(state).argmax(dim=0).data.cpu().numpy()[0]  # max over rows! (dim=0)
                 return action, rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
+
+        state = torch.from_numpy(state).flatten().unsqueeze(0)
+        next_state = torch.from_numpy(next_state).flatten().unsqueeze(0)
+
         self.memory.push(Experience(state, torch.tensor([action], device=self.device), next_state, torch.tensor([reward], device=self.device)))
         if self.memory.can_provide_sample(self.batch_size):
             experiences = self.memory.sample(self.batch_size)

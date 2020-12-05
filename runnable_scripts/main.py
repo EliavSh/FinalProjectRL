@@ -12,15 +12,17 @@ from core.zombie import Zombie
 def main():
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "true"  # cancel py-game display
     from environment.game import Game
+    from agents.random_agent import RandomAgent
     from agents.constant_agent import ConstantAgent
     from agents.ddqn_agent import DdqnAgent
+    from agents.alphaZero.alpha_zero_agent import AlphaZeroAgent
     from runnable_scripts.Utils import create_dir, ridge_plot, save_ini_file
 
     # create directory for storing the results
     dir_path = create_dir()
 
     # create the game with the required agents
-    env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=ConstantAgent, agent_light=DdqnAgent)
+    env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=ConstantAgent, agent_light=AlphaZeroAgent)
 
     # play the game and produce the dictionaries of the results
     episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)

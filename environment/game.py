@@ -16,13 +16,17 @@ from itertools import count
 import torch
 
 
+# from agents.alpha_zero_agent import AlphaZeroAgent
+# from core.alphaZero.coach import Coach
+
 def update_variables():
     MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
     MAX_ANGLE = int(get_config("MainInfo")['max_angle']) * math.pi / 180
     MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
     BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
     BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    return MAX_HIT_POINTS, MAX_ANGLE, MAX_VELOCITY, BOARD_WIDTH, BOARD_HEIGHT
+    HEAL_EPSILON = float(get_config("MainInfo")['heal_points'])
+    return MAX_HIT_POINTS, MAX_ANGLE, MAX_VELOCITY, BOARD_WIDTH, BOARD_HEIGHT, HEAL_EPSILON
 
 
 class Game:
@@ -31,9 +35,10 @@ class Game:
     MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
     BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
     BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
+    HEAL_POINTS = float(get_config("MainInfo")['heal_points'])
 
     def __init__(self, device, agent_zombie, agent_light):
-        Game.MAX_HIT_POINTS, Game.MAX_ANGLE, Game.MAX_VELOCITY, Game.BOARD_WIDTH, Game.BOARD_HEIGHT = update_variables()
+        Game.MAX_HIT_POINTS, Game.MAX_ANGLE, Game.MAX_VELOCITY, Game.BOARD_WIDTH, Game.BOARD_HEIGHT, Game.HEAL_POINTS = update_variables()
         main_info = get_config("MainInfo")
         self.grid = GameGrid()
         self.light_size = int(main_info['light_size'])
@@ -87,6 +92,9 @@ class Game:
         self.agent_zombie.reset()
 
     def play_zero_sum_game(self, path):
+        self.agent_light.reset_start_pos()
+        self.agent_zombie.reset_start_pos()
+
         episodes_dict = {'episode_rewards': [], 'episode_durations': []}
         steps_dict_light = {'epsilon': [], 'action': [], 'step': []}
         steps_dict_zombie = {'epsilon': [], 'action': [], 'step': []}
@@ -112,8 +120,8 @@ class Game:
                 zombie_master_reward += reward
                 next_state_zombie, next_state_light = self.get_state()
 
-                self.agent_zombie.learn(state_zombie.unsqueeze(0), action_zombie, next_state_zombie.unsqueeze(0), reward)
-                self.agent_light.learn(state_light.unsqueeze(0), action_light, next_state_light.unsqueeze(0), reward * -1)  # agent_light gets the opposite
+                self.agent_zombie.learn(state_zombie, action_zombie, next_state_zombie, reward)
+                self.agent_light.learn(state_light, action_light, next_state_light, reward * -1)  # agent_light gets the opposite
 
                 state_zombie, state_light = next_state_zombie, next_state_light
 
@@ -185,7 +193,7 @@ class Game:
         indices_to_keep = list(range(len(new_alive_zombies)))
         for index, zombie in enumerate(new_alive_zombies):
             zombie.move(light_action)
-            if 0 >= zombie.y or zombie.y >= Game.BOARD_HEIGHT:
+            if 0 > zombie.y or zombie.y >= Game.BOARD_HEIGHT:
                 indices_to_keep.remove(index)
             elif zombie.x >= Game.BOARD_WIDTH:
                 if Game.keep_alive(zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
@@ -214,7 +222,49 @@ class Game:
         for i in self.alive_zombies:
             zombie_grid[int(i.y), int(i.x)] = 1
             health_grid[int(i.y), int(i.x)] = i.hit_points
-        return torch.from_numpy(zombie_grid).flatten(), torch.from_numpy(np.concatenate((zombie_grid, health_grid))).flatten()
+        return zombie_grid, np.concatenate((zombie_grid, health_grid))
+
+    @staticmethod
+    def get_next_state(state, agent_type, action):
+        # only considering the case where dt = 1 AND angle = 0
+        # here all we do is cut the last column of state and append with zeros
+        # TODO - get next state with the impact of zombie and light exit
+        if agent_type == 'zombie':
+            reward = sum(state[:, Game.BOARD_HEIGHT])
+            zombie_action = action
+            # random sample len(actions) times from light-agent actions-space
+            light_action = np.random.randint(0, Game.BOARD_HEIGHT * Game.BOARD_WIDTH)
+        else:
+            light_action = action
+            # sample n times from zombie-agent actions-space
+            zombie_action = np.random.randint(0, Game.BOARD_HEIGHT)
+
+            keep_alive_last_column_of_zombies = list(map(lambda x: Game.keep_alive(x), state[Game.BOARD_HEIGHT:, -1]))
+            reward = sum(state[:Game.BOARD_HEIGHT, -1] * keep_alive_last_column_of_zombies)
+
+        # extract new zombie
+        new_first_column = np.expand_dims(np.array([0] * state.shape[0]), 1)
+        new_first_column[zombie_action] = 1
+
+        # taking all columns except the last one
+        old_data_to_be_concat = state[:, 0:-1]
+
+        # building new state without the last row of
+        new_state = np.concatenate((new_first_column, old_data_to_be_concat), 1)
+
+        light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
+        light_y = int(light_action / Zombie.BOARD_WIDTH)
+        # include only the start (the end is outside the light)
+        for i in range(Game.BOARD_HEIGHT):
+            for j in range(Game.BOARD_WIDTH):
+                if (light_x <= i < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= j < (light_y + Zombie.LIGHT_SIZE)):
+                    # in a case of an hit, increase the zombie's hit points by 1
+                    new_state[int(i + new_state.shape[0] / 2 - 1), j] += 1
+                else:
+                    # heal the zombie by (1-epsilon)
+                    new_state[int(i + new_state.shape[0] / 2 - 1), j] *= (1 - Game.HEAL_POINTS)
+
+        return new_state, reward
 
     def get_pygame_window(self):
         return pygame.surfarray.array3d(pygame.display.get_surface())

@@ -23,3 +23,4 @@ class GameGrid:
 
     def get_values(self):
         return self.__states
+
