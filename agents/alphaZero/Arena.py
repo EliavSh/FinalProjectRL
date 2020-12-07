@@ -46,7 +46,7 @@ class Arena():
         board = self.get_starting_state()[0] if self.agent_type == 'zombie' else self.get_starting_state()[1]
         it = 0
         total_reward = 0
-        while it < int(self.main_info['zombies_per_episode']) + int(self.main_info['board_width']) - 1:
+        while it < int(self.main_info['zombies_per_episode']) + int(self.main_info['board_width']):
             it += 1
             action = player(board)
 
@@ -60,7 +60,7 @@ class Arena():
             total_reward += reward
         return total_reward
 
-    def playGames(self, num, verbose=False):
+    def playGames(self, num, agent_type, verbose=False):
         """
         Plays num games in which player1 starts num/2 games and player2 starts
         num/2 games.
@@ -75,19 +75,23 @@ class Arena():
         two_rewards = []
         for _ in tqdm(range(num), desc="Arena.playGames (1)"):
             one_rewards.append(self.playGame(self.player1, verbose=verbose))
+        log.debug(f'first player rewards: {one_rewards}')
 
         for _ in tqdm(range(num), desc="Arena.playGames (2)"):
             two_rewards.append(self.playGame(self.player2, verbose=verbose))
+        log.debug(f'second player rewards: {two_rewards}')
 
-        return self.get_total_wins(one_rewards, two_rewards), self.get_total_wins(two_rewards, one_rewards)
+        return self.get_total_wins(one_rewards, two_rewards, agent_type), self.get_total_wins(two_rewards, one_rewards,
+                                                                                              agent_type)
 
     @staticmethod
-    def get_total_wins(rewards1, rewards2):
-        return sum(list(map(lambda x, y: x > y, rewards1, rewards2)))
+    def get_total_wins(rewards1, rewards2, agent_type):
+        return sum(list(map(lambda x, y: x > y if agent_type == 'zombie' else x < y, rewards1, rewards2)))
 
     @staticmethod
     def get_starting_state():
-        zombie_grid = np.reshape(np.array(range(Game.BOARD_HEIGHT * Game.BOARD_WIDTH)), [Game.BOARD_HEIGHT, Game.BOARD_WIDTH])
+        zombie_grid = np.reshape(np.array(range(Game.BOARD_HEIGHT * Game.BOARD_WIDTH)),
+                                 [Game.BOARD_HEIGHT, Game.BOARD_WIDTH])
         zombie_grid = zombie_grid.astype(np.float32)
         zombie_grid.fill(0)
         health_grid = copy.deepcopy(zombie_grid)
