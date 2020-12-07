@@ -24,13 +24,13 @@ args = dotdict({
     'updateThreshold': 0.6,  # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     'maxlenOfQueue': 200000,  # Number of game examples to train the neural networks.
     'numMCTSSims': 5,  # Number of games moves for MCTS to simulate.
-    'arenaCompare': 20,  # Number of games to play during arena play to determine if new net will be accepted.
+    'arenaCompare': 60,  # Number of games to play during arena play to determine if new net will be accepted.
     'cpuct': 1,
 
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('/dev/models/8x100x50', 'best.pth.tar'),
-    'numItersForTrainExamplesHistory': 20,
+    'numItersForTrainExamplesHistory': 100,
 
 })
 
@@ -84,7 +84,8 @@ class AlphaZeroAgent(Agent):
     def reset(self):
         self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)  # initiate the mcts for next episode
 
-        self.train_examples_history.append(self.train_examples)
+        self.train_examples_history.append(deepcopy(self.train_examples))
+        # self.train_examples = []
         self.current_episdoe += 1
         if len(self.train_examples_history) > args.numItersForTrainExamplesHistory:
             log.warning(
@@ -112,7 +113,7 @@ class AlphaZeroAgent(Agent):
             log.info('PITTING AGAINST PREVIOUS VERSION')
             arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
                           lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.possible_actions, self.agent_type)
-            pwins, nwins = arena.playGames(args.arenaCompare)
+            pwins, nwins = arena.playGames(args.arenaCompare, self.agent_type)
 
             log.info('NEW/PREV WINS : %d / %d' % (nwins, pwins))
             if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < args.updateThreshold:

@@ -7,11 +7,7 @@ import shutil
 import torch
 import numpy as np
 import pandas as pd
-from IPython import display
 from numpy.random import RandomState
-import seaborn as sns
-from matplotlib.transforms import Affine2D
-import mpl_toolkits.axisartist.floating_axes as floating_axes
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid_spec
 from matplotlib.patches import Patch

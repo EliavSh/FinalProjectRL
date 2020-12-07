@@ -78,9 +78,12 @@ class Game:
         self.done = False
 
     def calculate_start_positions(self):
-        zombie_home_length = int(self.grid.get_height() - 2 * self.grid.get_width() * math.tan(self.max_angle * math.pi / 180))
-        zombie_home_start_pos = int(self.grid.get_height() - zombie_home_length - self.grid.get_width() * math.tan(self.max_angle * math.pi / 180))  # m-n-b
-        return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), self.grid.get_width())
+        zombie_home_length = int(
+            self.grid.get_height() - 2 * self.grid.get_width() * math.tan(self.max_angle * math.pi / 180))
+        zombie_home_start_pos = int(self.grid.get_height() - zombie_home_length - self.grid.get_width() * math.tan(
+            self.max_angle * math.pi / 180))  # m-n-b
+        return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)),
+                           self.grid.get_width())
 
     def reset(self):
         self.current_time = 0
@@ -121,7 +124,8 @@ class Game:
                 next_state_zombie, next_state_light = self.get_state()
 
                 self.agent_zombie.learn(state_zombie, action_zombie, next_state_zombie, reward)
-                self.agent_light.learn(state_light, action_light, next_state_light, reward * -1)  # agent_light gets the opposite
+                self.agent_light.learn(state_light, action_light, next_state_light,
+                                       reward * -1)  # agent_light gets the opposite
 
                 state_zombie, state_light = next_state_zombie, next_state_light
 
@@ -196,7 +200,8 @@ class Game:
             if 0 > zombie.y or zombie.y >= Game.BOARD_HEIGHT:
                 indices_to_keep.remove(index)
             elif zombie.x >= Game.BOARD_WIDTH:
-                if Game.keep_alive(zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
+                if Game.keep_alive(
+                        zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
                 indices_to_keep.remove(index)  # deleting a zombie that reached the border
         return reward, list(np.array(new_alive_zombies)[indices_to_keep])
@@ -230,7 +235,7 @@ class Game:
         # here all we do is cut the last column of state and append with zeros
         # TODO - get next state with the impact of zombie and light exit
         if agent_type == 'zombie':
-            reward = sum(state[:, Game.BOARD_HEIGHT])
+            reward = sum(state[:, Game.BOARD_HEIGHT - 1])
             zombie_action = action
             # random sample len(actions) times from light-agent actions-space
             light_action = np.random.randint(0, Game.BOARD_HEIGHT * Game.BOARD_WIDTH)
@@ -252,17 +257,19 @@ class Game:
         # building new state without the last row of
         new_state = np.concatenate((new_first_column, old_data_to_be_concat), 1)
 
-        light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
-        light_y = int(light_action / Zombie.BOARD_WIDTH)
-        # include only the start (the end is outside the light)
-        for i in range(Game.BOARD_HEIGHT):
-            for j in range(Game.BOARD_WIDTH):
-                if (light_x <= i < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= j < (light_y + Zombie.LIGHT_SIZE)):
-                    # in a case of an hit, increase the zombie's hit points by 1
-                    new_state[int(i + new_state.shape[0] / 2 - 1), j] += 1
-                else:
-                    # heal the zombie by (1-epsilon)
-                    new_state[int(i + new_state.shape[0] / 2 - 1), j] *= (1 - Game.HEAL_POINTS)
+        # update health state
+        if agent_type == 'light':
+            light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
+            light_y = int(light_action / Zombie.BOARD_WIDTH)
+            # include only the start (the end is outside the light)
+            for i in range(Game.BOARD_HEIGHT):
+                for j in range(Game.BOARD_WIDTH):
+                    if (light_x <= i < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= j < (light_y + Zombie.LIGHT_SIZE)):
+                        # in a case of an hit, increase the zombie's hit points by 1
+                        new_state[int(i + new_state.shape[0] / 2), j] += 1
+                    else:
+                        # heal the zombie by (1-epsilon)
+                        new_state[int(i + new_state.shape[0] / 2), j] *= (1 - Game.HEAL_POINTS)
 
         return new_state, reward
 
@@ -287,16 +294,19 @@ class Game:
         zombie_image = Image.open(os.path.join(path, 'zombie.png'))
         light_image = Image.open(os.path.join(path, 'light.png'))
         # resize (light_image is doubled for 2x2 cells)
-        zombie_image = zombie_image.resize((int(self.display_width / self.grid.get_width()), int(self.display_height / self.grid.get_height())), 0)
+        zombie_image = zombie_image.resize(
+            (int(self.display_width / self.grid.get_width()), int(self.display_height / self.grid.get_height())), 0)
         light_image = light_image.resize(
-            (int(self.display_width / self.grid.get_width()) * self.light_size, int(self.display_height / self.grid.get_height()) * self.light_size), 0)
+            (int(self.display_width / self.grid.get_width()) * self.light_size,
+             int(self.display_height / self.grid.get_height()) * self.light_size), 0)
         # save
         zombie_image.save(os.path.join(path, 'zombie_image.png'))
         light_image.save(os.path.join(path, 'light_image.png'))
         # draw and save the grid
         self.draw_grid()
         # return the images in the pygame format
-        return pygame.image.load(os.path.join(path, 'zombie_image.PNG')), pygame.image.load(os.path.join(path, 'light_image.PNG')), pygame.image.load(
+        return pygame.image.load(os.path.join(path, 'zombie_image.PNG')), pygame.image.load(
+            os.path.join(path, 'light_image.PNG')), pygame.image.load(
             os.path.join(path, 'grid.jpeg'))
 
     def update(self, light_action):
@@ -322,9 +332,10 @@ class Game:
                 pygame.draw.rect(self.game_display, (255, 255, 255), rect, 1)
         # draw the start line
         y_adjustment = int(self.display_height / self.grid.get_height())
-        pygame.draw.rect(self.game_display, (0, 200, 50), [0, int((min(self.start_positions))) / self.grid.get_width() * y_adjustment, 10,
-                                                           int((max(self.start_positions) + np.diff(self.start_positions)[0] - min(
-                                                               self.start_positions))) / self.grid.get_width() * y_adjustment])
+        pygame.draw.rect(self.game_display, (0, 200, 50),
+                         [0, int((min(self.start_positions))) / self.grid.get_width() * y_adjustment, 10,
+                          int((max(self.start_positions) + np.diff(self.start_positions)[0] - min(
+                              self.start_positions))) / self.grid.get_width() * y_adjustment])
 
         path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "gameUtils")
         pygame.image.save(self.game_display, os.path.join(path, 'grid.jpeg'))
