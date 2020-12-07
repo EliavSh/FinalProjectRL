@@ -5,6 +5,7 @@ import os
 import pygame
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
 
 from environment.gameGrid import GameGrid
 import math

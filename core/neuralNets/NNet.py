@@ -16,7 +16,7 @@ sys.path.append('../../')
 args = dotdict({
     'lr': 0.001,
     'dropout': 0.3,
-    'epochs': 2,
+    'epochs': 5,
     'batch_size': 256,
     'cuda': torch.cuda.is_available(),
     'num_channels': 512,
@@ -39,7 +39,6 @@ class NNetWrapper(NeuralNet):
         optimizer = optim.Adam(self.nnet.parameters())
 
         for epoch in range(args.epochs):
-            print('EPOCH ::: ' + str(epoch + 1))
             self.nnet.train()
             pi_losses = AverageMeter()
             v_losses = AverageMeter()

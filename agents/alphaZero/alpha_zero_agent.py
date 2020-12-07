@@ -82,10 +82,8 @@ class AlphaZeroAgent(Agent):
         self.train_examples.append([state, self.pi, reward])
 
     def reset(self):
-        self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)  # initiate the mcts for next episode
-
         self.train_examples_history.append(deepcopy(self.train_examples))
-        # self.train_examples = []
+        self.train_examples = []
         self.current_episdoe += 1
         if len(self.train_examples_history) > args.numItersForTrainExamplesHistory:
             log.debug(
@@ -123,6 +121,8 @@ class AlphaZeroAgent(Agent):
                 log.info('ACCEPTING NEW MODEL')
                 self.nnet.save_checkpoint(folder=args.checkpoint, filename=self.getCheckpointFile(self.current_episdoe))
                 self.nnet.save_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
+
+        self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)  # initiate the mcts for next episode
 
     def getCheckpointFile(self, iteration):
         return 'checkpoint_' + str(iteration) + '.pth.tar'

@@ -13,6 +13,9 @@ import matplotlib.gridspec as grid_spec
 from matplotlib.patches import Patch
 
 from core.experience import Experience
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, episodes_dict):
@@ -91,8 +94,7 @@ def plot(values, moving_avg_period):
 
     moving_avg = get_moving_average(moving_avg_period, values)
     plt.plot(moving_avg)
-    print("Episode", len(values), "\n",
-          moving_avg_period, "episode moving avg:", moving_avg[-1])
+    log.info(str('Episode' + str(len(values)) + '\n' + str(moving_avg_period) + 'episode moving avg:' + str(moving_avg[-1])))
     return fig
 
 

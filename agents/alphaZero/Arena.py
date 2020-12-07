@@ -10,7 +10,7 @@ from runnable_scripts.Utils import get_config
 log = logging.getLogger(__name__)
 
 
-class Arena():
+class Arena:
     """
     An Arena class where any 2 agents can be pit against each other.
     """
@@ -81,12 +81,10 @@ class Arena():
             two_rewards.append(self.playGame(self.player2, verbose=verbose))
         log.info(f'second player rewards: {two_rewards}')
 
-        return self.get_total_wins(one_rewards, two_rewards, agent_type), self.get_total_wins(two_rewards, one_rewards,
-                                                                                              agent_type)
+        return self.get_total_wins(one_rewards, two_rewards), self.get_total_wins(two_rewards, one_rewards)
 
-    @staticmethod
-    def get_total_wins(rewards1, rewards2, agent_type):
-        return sum(list(map(lambda x, y: x > y if agent_type == 'zombie' else x < y, rewards1, rewards2)))
+    def get_total_wins(self, rewards1, rewards2):
+        return sum(list(map(lambda x, y: x > y if self.agent_type == 'zombie' else x < y, rewards1, rewards2)))
 
     @staticmethod
     def get_starting_state():
