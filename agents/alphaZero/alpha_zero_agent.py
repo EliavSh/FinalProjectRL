@@ -121,7 +121,7 @@ class AlphaZeroAgent(Agent):
                 self.nnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
             else:
                 log.info('ACCEPTING NEW MODEL')
-                self.nnet.load_checkpoint(folder=args.checkpoint, filename=self.getCheckpointFile(self.current_episdoe))
+                self.nnet.save_checkpoint(folder=args.checkpoint, filename=self.getCheckpointFile(self.current_episdoe))
                 self.nnet.save_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
 
     def getCheckpointFile(self, iteration):
