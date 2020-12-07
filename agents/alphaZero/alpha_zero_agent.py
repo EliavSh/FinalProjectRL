@@ -88,7 +88,7 @@ class AlphaZeroAgent(Agent):
         # self.train_examples = []
         self.current_episdoe += 1
         if len(self.train_examples_history) > args.numItersForTrainExamplesHistory:
-            log.warning(
+            log.debug(
                 f"Removing the oldest entry in trainExamples. len(trainExamplesHistory) = {len(self.train_examples_history)}")
             self.train_examples_history.pop(0)
 
@@ -121,7 +121,7 @@ class AlphaZeroAgent(Agent):
                 self.nnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
             else:
                 log.info('ACCEPTING NEW MODEL')
-                self.nnet.save_checkpoint(folder=args.checkpoint, filename=self.getCheckpointFile(self.current_episdoe))
+                self.nnet.load_checkpoint(folder=args.checkpoint, filename=self.getCheckpointFile(self.current_episdoe))
                 self.nnet.save_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
 
     def getCheckpointFile(self, iteration):

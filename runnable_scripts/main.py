@@ -9,7 +9,7 @@ from core.node import Node
 from core.zombie import Zombie
 import logging
 
-logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG)
+logging.basicConfig(filename='example.log', filemode='w', level=logging.INFO)
 
 
 def main():

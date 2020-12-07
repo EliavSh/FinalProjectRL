@@ -75,11 +75,11 @@ class Arena():
         two_rewards = []
         for _ in tqdm(range(num), desc="Arena.playGames (1)"):
             one_rewards.append(self.playGame(self.player1, verbose=verbose))
-        log.debug(f'first player rewards: {one_rewards}')
+        log.info(f'first player rewards: {one_rewards}')
 
         for _ in tqdm(range(num), desc="Arena.playGames (2)"):
             two_rewards.append(self.playGame(self.player2, verbose=verbose))
-        log.debug(f'second player rewards: {two_rewards}')
+        log.info(f'second player rewards: {two_rewards}')
 
         return self.get_total_wins(one_rewards, two_rewards, agent_type), self.get_total_wins(two_rewards, one_rewards,
                                                                                               agent_type)
