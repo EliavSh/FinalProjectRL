@@ -19,6 +19,7 @@ class MCTS:
     def __init__(self, nnet, possible_actions, agent_type, args):
         self.possible_actions = possible_actions
         self.simulation_num = int(get_config("TreeAgentInfo")['simulation_num'])  # number of simulations in the simulation phase
+        self.simulation_depth = int(get_config("TreeAgentInfo")['simulation_depth'])  # number of simulations in the simulation phase
         self.agent_type = agent_type
         self.nnet = nnet
         self.args = args
@@ -42,7 +43,7 @@ class MCTS:
                    proportional to Nsa[(s,a)]**(1./temp)
         """
         for i in range(self.simulation_num):
-            self.search(canonicalBoard, 0, 2, 0)
+            self.search(canonicalBoard, 0, self.simulation_depth, 0)
 
         s = canonicalBoard.__str__()
 
