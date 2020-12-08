@@ -4,7 +4,7 @@ import time
 import torch
 import torch.optim as optim
 from core.neuralNets.NeuralNet import NeuralNet
-from .OthelloNNet import OthelloNNet as onnet
+from AlphaZeroNet import AlphaZeroNet as onnet
 
 import numpy as np
 from tqdm import tqdm
