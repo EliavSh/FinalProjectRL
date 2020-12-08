@@ -94,7 +94,7 @@ def plot(values, moving_avg_period):
 
     moving_avg = get_moving_average(moving_avg_period, values)
     plt.plot(moving_avg)
-    log.info(str('Episode' + str(len(values)) + '\n' + str(moving_avg_period) + 'episode moving avg:' + str(moving_avg[-1])))
+    log.info(str('Episode ' + str(len(values)) + ': ' + str(moving_avg_period) + ' episode moving avg of ' + str(moving_avg[-1])))
     return fig
 
 
