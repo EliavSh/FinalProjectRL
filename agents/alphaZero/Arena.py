@@ -83,8 +83,9 @@ class Arena:
 
         return self.get_total_wins(one_rewards, two_rewards), self.get_total_wins(two_rewards, one_rewards)
 
-    def get_total_wins(self, rewards1, rewards2):
-        return sum(list(map(lambda x, y: x > y if self.agent_type == 'zombie' else x < y, rewards1, rewards2)))
+    @staticmethod
+    def get_total_wins(rewards1, rewards2):
+        return sum(list(map(lambda x, y: x > y, rewards1, rewards2)))
 
     @staticmethod
     def get_starting_state():

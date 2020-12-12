@@ -246,7 +246,7 @@ class Game:
             zombie_action = np.random.randint(0, Game.BOARD_HEIGHT)
 
             keep_alive_last_column_of_zombies = list(map(lambda x: Game.keep_alive(x), state[Game.BOARD_HEIGHT:, -1]))
-            reward = sum(state[:Game.BOARD_HEIGHT, -1] * keep_alive_last_column_of_zombies)
+            reward = -sum(state[:Game.BOARD_HEIGHT, -1] * keep_alive_last_column_of_zombies)
 
         # extract new zombie
         new_first_column = np.expand_dims(np.array([0] * state.shape[0]), 1)
