@@ -45,7 +45,7 @@ class MCTS:
         for i in range(self.simulation_num):
             self.search(canonicalBoard, 0, self.simulation_depth, 0)
 
-        s = canonicalBoard.__str__()
+        s = canonicalBoard[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH].__str__()
 
         counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in range(len(self.possible_actions))]
 
@@ -82,7 +82,7 @@ class MCTS:
         """
 
         iteration += 1
-        s = canonicalBoard.__str__()
+        s = canonicalBoard[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH].__str__()
 
         # TODO - question - should we return the v with the reward or the v only like we do?
 
