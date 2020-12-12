@@ -262,16 +262,16 @@ class Game:
         if agent_type == 'light':
             light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
             light_y = int(light_action / Zombie.BOARD_WIDTH)
-            # include only the start (the end is outside the light)
-            zombies_is, zombies_js = np.nonzero(new_state)
-            for i in range(Game.BOARD_HEIGHT):
-                for j in range(Game.BOARD_WIDTH):
-                    if (light_x <= j < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= i < (light_y + Zombie.LIGHT_SIZE)):
-                        # in a case of an hit, increase the zombie's hit points by 1
-                        new_state[int(i + new_state.shape[0] / 2), j] += 1
-                    else:
-                        # heal the zombie by (1-epsilon)
-                        new_state[int(i + new_state.shape[0] / 2), j] *= (1 - Game.HEAL_POINTS)
+            # loop over all zombies - by them positions
+            zombies_is, zombies_js = np.nonzero(new_state[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH])
+            for (i, j) in zip(zombies_is, zombies_js):
+                # include only the start (the end is outside the light)
+                if (light_x <= j < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= i < (light_y + Zombie.LIGHT_SIZE)):
+                    # in a case of an hit, increase the zombie's hit points by 1
+                    new_state[int(i + new_state.shape[0] / 2), j] += 1
+                else:
+                    # heal the zombie by (1-epsilon)
+                    new_state[int(i + new_state.shape[0] / 2), j] *= (1 - Game.HEAL_POINTS)
 
         return new_state, reward
 
