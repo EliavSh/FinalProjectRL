@@ -263,9 +263,10 @@ class Game:
             light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
             light_y = int(light_action / Zombie.BOARD_WIDTH)
             # include only the start (the end is outside the light)
+            zombies_is, zombies_js = np.nonzero(new_state)
             for i in range(Game.BOARD_HEIGHT):
                 for j in range(Game.BOARD_WIDTH):
-                    if (light_x <= i < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= j < (light_y + Zombie.LIGHT_SIZE)):
+                    if (light_x <= j < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= i < (light_y + Zombie.LIGHT_SIZE)):
                         # in a case of an hit, increase the zombie's hit points by 1
                         new_state[int(i + new_state.shape[0] / 2), j] += 1
                     else:
