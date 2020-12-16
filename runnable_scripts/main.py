@@ -22,7 +22,8 @@ def main():
     # create directory for storing the results
     dir_path = create_dir()
 
-    logging.basicConfig(filename=os.path.join(dir_path, 'logger.log'), filemode='w', format='%(asctime)s %(levelname)-8s %(message)s',
+    logging.basicConfig(filename=os.path.join(dir_path, 'logger.log'), filemode='w',
+                        format='%(asctime)s %(levelname)-8s %(message)s',
                         level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 
     # create the game with the required agents
@@ -41,26 +42,22 @@ def main():
 
 
 if __name__ == "__main__":
-    temp = 2
+    temp = 1
     if temp == 1:
-        for size in range(2, 10, 2):
-            for exploration_rate in linspace(0.0, 4., 21):
-                path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
-                                    'config.ini')
-                parser = RawConfigParser()
-                parser.read(path)
-                parser.set('TreeAgentInfo', 'exploration_const', str(exploration_rate))
-                parser.set('MainInfo', 'board_height', str(size))
-                parser.set('MainInfo', 'board_width', str(size // 2))
-                parser.set('MainInfo', 'light_size', str(size // 2))
-                config_file = open(path, 'w')
-                parser.write(config_file, space_around_delimiters=True)
-                config_file.close()
+        for cpuct in linspace(0.15, 1.65, 7):
+            path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
+                                'config.ini')
+            parser = RawConfigParser()
+            parser.read(path)
+            parser.set('AlphaZeroInfo', 'cpuct', str(cpuct))
+            config_file = open(path, 'w')
+            parser.write(config_file, space_around_delimiters=True)
+            config_file.close()
 
-                # update all variables due to changes in the configuration file
-                Zombie.update_variables()
-                Node.update_variables()
+            # update all variables due to changes in the configuration file
+            Zombie.update_variables()
+            Node.update_variables()
 
-                main()
+            main()
     elif temp == 2:
         main()

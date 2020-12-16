@@ -21,16 +21,16 @@ args = dotdict({
     # 'numIters': 1000,
     # 'numEps': 100,  # Number of complete self-play games to simulate during a new iteration.
     # 'tempThreshold': 15,  #
-    'updateThreshold': 0.55,  # During arena playoff, new neural net will be accepted if threshold or more of games are won.
+    'updateThreshold': 0.6,
+    # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     # 'maxlenOfQueue': 200000,  # Number of game examples to train the neural networks.
     # 'numMCTSSims': 5,  # Numbaer of games moves for MCTS to simulate.
-    'arenaCompare': 20,  # Number of games to play during arena play to determine if new net will be accepted.
-    'cpuct': 1.4,
+    'arenaCompare': 100,  # Number of games to play during arena play to determine if new net will be accepted.
 
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('/dev/models/8x100x50', 'best.pth.tar'),
-    'numItersForTrainExamplesHistory': 50,
+    'numItersForTrainExamplesHistory': 200,
 
 })
 
@@ -43,6 +43,8 @@ class AlphaZeroAgent(Agent):
         AlphaZeroAgent.LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
         AlphaZeroAgent.DT = int(get_config("MainInfo")['dt'])
         AlphaZeroAgent.ANGLE = float(get_config("MainInfo")['max_angle'])
+        AlphaZeroAgent.CPUCT = float(get_config('AlphaZeroInfo')['cpuct'])
+        return AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT
 
     # static field
     ZOMBIE_NUM = 1
@@ -51,9 +53,12 @@ class AlphaZeroAgent(Agent):
     LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
     DT = int(get_config("MainInfo")['dt'])
     ANGLE = float(get_config("MainInfo")['max_angle'])
+    CPUCT = float(get_config('AlphaZeroInfo')['cpuct'])
 
     def __init__(self, device, agent_type):
         super().__init__(EpsilonGreedyStrategy(), agent_type)
+        AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT = AlphaZeroAgent.update_variables()
+        args['cpuct'] = AlphaZeroAgent.CPUCT
 
         self.current_step = 0
         self.num_episode_per_learning = int(get_config("AlphaZeroInfo")['num_episode_per_learning'])

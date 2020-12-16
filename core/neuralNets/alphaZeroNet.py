@@ -56,4 +56,4 @@ class AlphaZeroNet(nn.Module):
         pi = self.fc3(s)  # batch_size x action_size
         v = self.fc4(s)  # batch_size x 1
 
-        return F.log_softmax(pi, dim=1), v
+        return F.log_softmax(pi, dim=1), torch.tanh(v)
