@@ -72,10 +72,10 @@ class DdqnAgent(Agent):
             else :
                 zombies_num = len(alive_zombies);
                 if zombies_num  == 0 :
-                    action = random.randrange(self.num_actions)
+                    action = (random.randrange(self.BOARD_HEIGHT)-1)*self.BOARD_WIDTH
                 else:
                     index = random.randrange(zombies_num)
-                    action = int(max(alive_zombies[index].y-math.floor(self.LIGHT_SIZE/2),0)* self.BOARD_WIDTH + max(alive_zombies[index].x-math.floor(self.LIGHT_SIZE/2),0))
+                    action = int(round(max(alive_zombies[index].y-math.floor(self.LIGHT_SIZE/2),0))* self.BOARD_WIDTH + round(max(alive_zombies[index].x-math.floor(self.LIGHT_SIZE/2),0)))
 
             return action, rate, self.current_step  # explore
         else:
