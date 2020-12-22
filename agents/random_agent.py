@@ -20,12 +20,12 @@ class RandomAgent(Agent):
         super(RandomAgent, self).__init__(EpsilonGreedyStrategy(), agent_type)
         self.current_step = 0
 
-    def select_action(self, state):
+    def select_action(self, state,alive_zombies,writer):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
         return random.sample(self.possible_actions, 1)[0], rate, self.current_step
 
-    def learn(self, state, action, next_state, reward):
+    def learn(self, state, action, next_state, reward,writer):
         pass
 
     def reset(self):
