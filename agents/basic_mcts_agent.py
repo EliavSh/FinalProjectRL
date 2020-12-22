@@ -49,7 +49,7 @@ class BasicMCTSAgent(Agent):
         self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width'])
         self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
 
-    def select_action(self, state):
+    def select_action(self, state,alive_zombies):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
 
