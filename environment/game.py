@@ -14,7 +14,7 @@ import torchvision.transforms as T
 from runnable_scripts.Utils import get_config, plot_progress
 from itertools import count
 import torch
-
+from torch.utils.tensorboard import SummaryWriter
 
 def update_variables():
     MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
@@ -59,6 +59,7 @@ class Game:
         self.agent_light = agent_light(device, 'light')
         # load main info
         self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width']) - 1
+        self.zombies_per_episode = int(main_info['zombies_per_episode'])
         self.check_point = int(main_info['check_point'])
         self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
         # other fields
@@ -71,6 +72,7 @@ class Game:
         self.device = device
         self.current_screen = None
         self.done = False
+        self.writer = SummaryWriter(log_dir= '../runs')
 
     def calculate_start_positions(self):
         zombie_home_length = int(self.grid.get_height() - 2 * self.grid.get_width() * math.tan(self.max_angle * math.pi / 180))
@@ -97,8 +99,8 @@ class Game:
             zombie_master_reward = 0
             episode_start_time = time.time()
             for time_step in count():
-                action_zombie, rate, current_step = self.agent_zombie.select_action(state_zombie)
-                action_light, rate, current_step = self.agent_light.select_action(state_light)
+                action_zombie, rate, current_step = self.agent_zombie.select_action(state_zombie,self.alive_zombies,self.writer)
+                action_light, rate, current_step = self.agent_light.select_action(state_light,self.alive_zombies,self.writer)
 
                 # update dict
                 steps_dict_light['epsilon'].append(rate)
@@ -109,11 +111,12 @@ class Game:
                 steps_dict_zombie['step'].append(time_step)
 
                 reward = self.apply_actions(action_zombie, action_light)
-                zombie_master_reward += reward
+                if reward > 0:
+                    zombie_master_reward += reward
                 next_state_zombie, next_state_light = self.get_state()
 
-                self.agent_zombie.learn(state_zombie.unsqueeze(0), action_zombie, next_state_zombie.unsqueeze(0), reward)
-                self.agent_light.learn(state_light.unsqueeze(0), action_light, next_state_light.unsqueeze(0), reward * -1)  # agent_light gets the opposite
+                self.agent_zombie.learn(state_zombie.unsqueeze(0), action_zombie, next_state_zombie.unsqueeze(0), reward,self.writer)
+                self.agent_light.learn(state_light.unsqueeze(0), action_light, next_state_light.unsqueeze(0), reward * -1,self.writer)  # agent_light gets the opposite
 
                 state_zombie, state_light = next_state_zombie, next_state_light
 
@@ -145,7 +148,6 @@ class Game:
             The action is an angle between 0 and 180 degrees, that
             decides the direction of the bubble.
         light_action
-
         Returns
         -------
         ob, reward, episode_over, info : tuple
@@ -163,9 +165,10 @@ class Game:
             self.update(light_action)
 
         # add new zombie
-        new_zombie = Game.create_zombie(zombie_action)
-        self.alive_zombies.append(new_zombie)
-        self.all_zombies.append(new_zombie)
+        if len(self.all_zombies) < self.zombies_per_episode:
+            new_zombie = Game.create_zombie(zombie_action)
+            self.alive_zombies.append(new_zombie)
+            self.all_zombies.append(new_zombie)
 
         # move all zombies one step and calc reward
         reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action)
@@ -190,6 +193,8 @@ class Game:
             elif zombie.x >= Game.BOARD_WIDTH:
                 if Game.keep_alive(zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
+                else:
+                    reward -= 1
                 indices_to_keep.remove(index)  # deleting a zombie that reached the border
         return reward, list(np.array(new_alive_zombies)[indices_to_keep])
 
@@ -204,7 +209,8 @@ class Game:
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
-            return np.power(h / Game.MAX_HIT_POINTS, 1 / 3) < random.random()
+            #return np.power(h / Game.MAX_HIT_POINTS, 1 / 3) < random.random()
+            return True
 
     def get_state(self):
         zombie_grid = self.grid.get_values()
