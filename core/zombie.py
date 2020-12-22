@@ -27,6 +27,7 @@ class Zombie:
     BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
     BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
     LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
+    MAX_HIT_POINT = int(get_config("MainInfo")['max_hit_points'])
     DT = int(get_config("MainInfo")['dt'])
     ANGLE = float(get_config("MainInfo")['max_angle'])
     START_POSITIONS = calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE)
@@ -69,10 +70,11 @@ class Zombie:
         # include only the start (the end is outside the light)
         if (light_x <= self.x < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= self.y < (light_y + Zombie.LIGHT_SIZE)):
             # in a case of an hit, increase the zombie's hit points by 1
-            self.hit_points += 1
-        else:
-            # heal the zombie by (1-epsilon)
-            self.hit_points *= (1 - self.heal_epsilon)
+            if self.hit_points < self.MAX_HIT_POINT:
+                self.hit_points += 1
+        #else:
+        #    # heal the zombie by (1-epsilon)
+        #    self.hit_points *= (1 - self.heal_epsilon)
 
     def move(self, light_action):
         """
@@ -88,7 +90,7 @@ class Zombie:
             # next step, move forward and punish
             self.x += self.v_x * Zombie.DT
             self.y += self.v_y * Zombie.DT
-            self.current_state = self.x + self.y * Zombie.BOARD_HEIGHT
+            self.current_state = self.x + self.y * Zombie.BOARD_WIDTH
         # hit/heal the zombie
         self.update_hit_points(light_action)
 
