@@ -24,7 +24,7 @@ class ConstantAgent(Agent):
         self.current_step = 0
         self.constant_action = ConstantAgent.CONST_ACTION
 
-    def select_action(self, state):
+    def select_action(self, state,alive_zombies,writer):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
         return self.possible_actions[self.constant_action], rate, self.current_step
