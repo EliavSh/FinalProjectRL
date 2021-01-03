@@ -91,7 +91,7 @@ class DdqnAgent(Agent):
                     action = alive_zombie_indexes_actions.argmax(dim=0)
                     index = action.numpy()[0]
                     try:
-                        action = int((max(alive_zombies[index].y-math.floor(self.LIGHT_SIZE/2),0)) * self.BOARD_WIDTH + (max(alive_zombies[index].x-math.floor(self.LIGHT_SIZE/2),0)))
+                        action = int((max(round(alive_zombies[index].y)-math.floor(self.LIGHT_SIZE/2),0)) * self.BOARD_WIDTH + (max(round(alive_zombies[index].x)-math.floor(self.LIGHT_SIZE/2),0)))
                     except:
                         print("An exception occurred")
                 return action, rate, self.current_step
