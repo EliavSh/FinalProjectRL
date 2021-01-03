@@ -49,7 +49,7 @@ class BasicMCTSAgent(Agent):
         self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width'])
         self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
 
-    def select_action(self, state,alive_zombies):
+    def select_action(self, state,alive_zombies,writer):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
 
@@ -93,7 +93,7 @@ class BasicMCTSAgent(Agent):
 
         return action, rate, self.current_step
 
-    def learn(self, _, action, __, reward):
+    def learn(self, _, action, __, reward,writer):
         # back-propagation phase, start back-propagating from the current real world node
         # self.episode_reward += reward
         # self.back_propagation(self.temporary_root, reward, self.root)
