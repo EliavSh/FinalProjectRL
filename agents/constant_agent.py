@@ -29,7 +29,7 @@ class ConstantAgent(Agent):
         self.current_step += 1
         return self.possible_actions[self.constant_action], rate, self.current_step
 
-    def learn(self, state, action, next_state, reward):
+    def learn(self, state, action, next_state, reward,writer):
         pass
 
     def reset(self):
