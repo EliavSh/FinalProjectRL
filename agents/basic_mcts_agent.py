@@ -273,7 +273,7 @@ class BasicMCTSAgent(Agent):
         if agent_type == 'zombie':
             zombie_action = action
             # random sample len(actions) times from light-agent actions-space
-            light_action = 0  # np.random.randint(0, BasicMCTSAgent.BOARD_HEIGHT * BasicMCTSAgent.BOARD_WIDTH)
+            light_action = np.random.randint(0, BasicMCTSAgent.BOARD_HEIGHT * BasicMCTSAgent.BOARD_WIDTH)
         else:
             light_action = action
             # sample n times from zombie-agent actions-space
