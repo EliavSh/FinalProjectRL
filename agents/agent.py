@@ -26,6 +26,7 @@ class Agent:
     ANGLE = float(get_config("MainInfo")['max_angle'])
 
     def __init__(self, strategy, agent_type):
+        Agent.update_variables()
         self.agent_type = agent_type
         self.strategy = strategy
         self.possible_actions = list(range(len(calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT,
@@ -47,5 +48,6 @@ class Agent:
     def reset_start_pos(self):
         Agent.update_variables()
         self.possible_actions = list(
-            range(len(calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT, Agent.ANGLE)))) if self.agent_type == "zombie" else list(
+            range(len(calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT,
+                                                Agent.ANGLE)))) if self.agent_type == "zombie" else list(
             range(Agent.BOARD_HEIGHT * Agent.BOARD_WIDTH))

@@ -46,7 +46,7 @@ class Arena:
         board = self.get_starting_state()[0] if self.agent_type == 'zombie' else self.get_starting_state()[1]
         it = 0
         total_reward = 0
-        while it < int(self.main_info['zombies_per_episode']) + int(self.main_info['board_width']):
+        while it < int(self.main_info['zombies_per_episode']) + Game.BOARD_WIDTH:
             it += 1
             action = player(board)
 

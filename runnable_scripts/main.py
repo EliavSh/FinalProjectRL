@@ -44,12 +44,14 @@ def main():
 if __name__ == "__main__":
     temp = 1
     if temp == 1:
-        for cpuct in linspace(0.15, 1.65, 7):
+        for board in range(20, 60, 10):
+            # for cpuct in linspace(0.15, 1.65, 7):
             path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
                                 'config.ini')
             parser = RawConfigParser()
             parser.read(path)
-            parser.set('AlphaZeroInfo', 'cpuct', str(cpuct))
+            parser.set('MainInfo', 'board_height', str(board))
+            parser.set('MainInfo', 'board_width', str(board))
             config_file = open(path, 'w')
             parser.write(config_file, space_around_delimiters=True)
             config_file.close()

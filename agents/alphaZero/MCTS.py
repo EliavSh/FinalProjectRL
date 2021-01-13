@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import logging
 import math
 
@@ -42,7 +43,7 @@ class MCTS:
             probs: a policy vector where the probability of the ith action is
                    proportional to Nsa[(s,a)]**(1./temp)
         """
-        for i in range(self.simulation_num):
+        for _ in tqdm(range(self.simulation_num)):
             self.search(canonicalBoard, 0, self.simulation_depth, 0)
 
         s = canonicalBoard[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH].__str__()

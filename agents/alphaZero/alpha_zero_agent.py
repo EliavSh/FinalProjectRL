@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import sys
 from pickle import Pickler, Unpickler
 from copy import deepcopy
@@ -25,12 +26,12 @@ args = dotdict({
     # During arena playoff, new neural net will be accepted if threshold or more of games are won.
     # 'maxlenOfQueue': 200000,  # Number of game examples to train the neural networks.
     # 'numMCTSSims': 5,  # Numbaer of games moves for MCTS to simulate.
-    'arenaCompare': 100,  # Number of games to play during arena play to determine if new net will be accepted.
+    'arenaCompare': 40,  # Number of games to play during arena play to determine if new net will be accepted.
 
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('/dev/models/8x100x50', 'best.pth.tar'),
-    'numItersForTrainExamplesHistory': 200,
+    'train_examples_history': 200,
 
 })
 
@@ -44,7 +45,8 @@ class AlphaZeroAgent(Agent):
         AlphaZeroAgent.DT = int(get_config("MainInfo")['dt'])
         AlphaZeroAgent.ANGLE = float(get_config("MainInfo")['max_angle'])
         AlphaZeroAgent.CPUCT = float(get_config('AlphaZeroInfo')['cpuct'])
-        return AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT
+        AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY = float(get_config('AlphaZeroInfo')['train_examples_history'])
+        return AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT, AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY
 
     # static field
     ZOMBIE_NUM = 1
@@ -54,10 +56,11 @@ class AlphaZeroAgent(Agent):
     DT = int(get_config("MainInfo")['dt'])
     ANGLE = float(get_config("MainInfo")['max_angle'])
     CPUCT = float(get_config('AlphaZeroInfo')['cpuct'])
+    TRAIN_EXAMPLES_HISTORY = float(get_config('AlphaZeroInfo')['train_examples_history'])
 
     def __init__(self, device, agent_type):
         super().__init__(EpsilonGreedyStrategy(), agent_type)
-        AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT = AlphaZeroAgent.update_variables()
+        AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT, AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY = AlphaZeroAgent.update_variables()
         args['cpuct'] = AlphaZeroAgent.CPUCT
 
         self.current_step = 0
@@ -80,7 +83,8 @@ class AlphaZeroAgent(Agent):
 
         self.pi = self.mcts.getActionProb(state)
 
-        return np.random.choice(len(self.pi), p=self.pi), rate, self.current_step
+        return random.choice([i for i, v in enumerate(self.pi) if v == max(self.pi)]), rate, self.current_step
+        # return np.random.choice(len(self.pi), p=self.pi), rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
         # not really learning, just recording sample for later
@@ -90,7 +94,7 @@ class AlphaZeroAgent(Agent):
         self.train_examples_history.append(deepcopy(self.train_examples))
         self.train_examples = []
         self.current_episdoe += 1
-        if len(self.train_examples_history) > args.numItersForTrainExamplesHistory:
+        if len(self.train_examples_history) > AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY:
             log.debug(
                 f"Removing the oldest entry in trainExamples. len(trainExamplesHistory) = {len(self.train_examples_history)}")
             self.train_examples_history.pop(0)
