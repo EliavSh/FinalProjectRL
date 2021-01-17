@@ -1,7 +1,3 @@
-import torch
-import numpy as np
-
-
 class QValues:
 
     @staticmethod
@@ -11,7 +7,6 @@ class QValues:
 
     @staticmethod
     def get_next(target_net, next_states, policy_net):
-        batch_size = next_states.shape[0]
         online_network_best_actions = policy_net(next_states).max(dim=1)[1]  # the output of .max is tuple of (data, indexes) so we take [1]
         values = target_net(next_states).gather(dim=1, index=online_network_best_actions.unsqueeze(-1))
         return values.squeeze(1)  # back to 1-D vector
