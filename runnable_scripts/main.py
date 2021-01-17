@@ -24,7 +24,7 @@ def main():
 
     logging.basicConfig(filename=os.path.join(dir_path, 'logger.log'), filemode='w',
                         format='%(asctime)s %(levelname)-8s %(message)s',
-                        level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+                        level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
     # create the game with the required agents
     env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=ConstantAgent,
@@ -44,7 +44,7 @@ def main():
 if __name__ == "__main__":
     temp = 1
     if temp == 1:
-        for board in range(20, 60, 10):
+        for board in range(10, 25, 5):
             # for cpuct in linspace(0.15, 1.65, 7):
             path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
                                 'config.ini')

@@ -43,7 +43,8 @@ class MCTS:
             probs: a policy vector where the probability of the ith action is
                    proportional to Nsa[(s,a)]**(1./temp)
         """
-        for _ in tqdm(range(self.simulation_num)):
+        # TODO - add log at the right level that prints the time of searching
+        for _ in range(self.simulation_num):
             self.search(canonicalBoard, 0, self.simulation_depth, 0)
 
         s = canonicalBoard[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH].__str__()
@@ -85,12 +86,11 @@ class MCTS:
         iteration += 1
         s = canonicalBoard[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH].__str__()
 
-        # TODO - question - should we return the v with the reward or the v only like we do?
-
         self.Es[s] = iteration >= iteration_end
         if self.Es[s]:
             # terminal node
-            return reward
+            _, v = self.nnet.predict(canonicalBoard)
+            return v
 
         if s not in self.Ps:
             # leaf node

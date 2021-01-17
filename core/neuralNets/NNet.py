@@ -8,6 +8,7 @@ from core.neuralNets.alphaZeroNet import AlphaZeroNet as onnet
 
 import numpy as np
 from tqdm import tqdm
+from torchsummary import summary
 
 from agents.alphaZero.utils import dotdict, AverageMeter
 
@@ -27,6 +28,8 @@ class NNetWrapper(NeuralNet):
     def __init__(self, board_width, board_height, num_actions):
         super().__init__()
         self.nnet = onnet(board_width, board_height, num_actions, args)
+        summary(self.nnet, verbose=2)
+
         self.board_x, self.board_y = board_height, board_width
 
         if args.cuda:
