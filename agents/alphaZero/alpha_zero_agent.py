@@ -66,8 +66,8 @@ class AlphaZeroAgent(Agent):
         self.current_step = 0
         self.num_episode_per_learning = int(get_config("AlphaZeroInfo")['num_episode_per_learning'])
         self.current_episdoe = 0
-        self.end_learning_step = int(get_config('main_info')['num_train_episodes']) * (
-                    int(get_config('main_info')['zombies_per_episode']) + int(get_config('main_info')['board_width']) + 2)
+        self.end_learning_step = int(get_config('MainInfo')['num_train_episodes']) * (
+                    int(get_config('MainInfo')['zombies_per_episode']) + int(get_config('MainInfo')['board_width']) + 2)
 
         if agent_type == 'zombie':
             self.nnet = nn(AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.BOARD_HEIGHT, len(self.possible_actions))
