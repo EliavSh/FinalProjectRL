@@ -66,6 +66,8 @@ class AlphaZeroAgent(Agent):
         self.current_step = 0
         self.num_episode_per_learning = int(get_config("AlphaZeroInfo")['num_episode_per_learning'])
         self.current_episdoe = 0
+        self.end_learning_step = int(get_config('main_info')['num_train_episodes']) * (
+                    int(get_config('main_info')['zombies_per_episode']) + int(get_config('main_info')['board_width']) + 2)
 
         if agent_type == 'zombie':
             self.nnet = nn(AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.BOARD_HEIGHT, len(self.possible_actions))
@@ -83,8 +85,10 @@ class AlphaZeroAgent(Agent):
 
         self.pi = self.mcts.getActionProb(state)
 
-        return random.choice([i for i, v in enumerate(self.pi) if v == max(self.pi)]), rate, self.current_step
-        # return np.random.choice(len(self.pi), p=self.pi), rate, self.current_step
+        if self.current_step < self.end_learning_step:
+            return np.random.choice(len(self.pi), p=self.pi), rate, self.current_step
+        else:
+            return random.choice([i for i, v in enumerate(self.pi) if v == max(self.pi)]), rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
         # not really learning, just recording sample for later
