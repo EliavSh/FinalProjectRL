@@ -66,8 +66,8 @@ class AlphaZeroAgent(Agent):
         self.current_step = 0
         self.num_episode_per_learning = int(get_config("AlphaZeroInfo")['num_episode_per_learning'])
         self.current_episdoe = 0
-        self.end_learning_step = int(get_config('main_info')['num_train_episodes']) * (
-                    int(get_config('main_info')['zombies_per_episode']) + int(get_config('main_info')['board_width']) + 2)
+        self.end_learning_step = int(get_config('MainInfo')['num_train_episodes']) * (
+                int(get_config('MainInfo')['zombies_per_episode']) + int(get_config('MainInfo')['board_width']) + 2)
 
         if agent_type == 'zombie':
             self.nnet = nn(AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.BOARD_HEIGHT, len(self.possible_actions))
@@ -121,18 +121,26 @@ class AlphaZeroAgent(Agent):
             self.nnet.train(trainExamples)
             nmcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)
 
-            log.info('PITTING AGAINST PREVIOUS VERSION')
-            arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
-                          lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.possible_actions, self.agent_type)
-            pwins, nwins = arena.playGames(args.arenaCompare, self.agent_type)
+            # if self.current_step < self.end_learning_step:
+            if self.current_step < -float('inf'):
+                log.info('PITTING AGAINST PREVIOUS VERSION')
+                arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
+                              lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.possible_actions,
+                              self.agent_type)
+                pwins, nwins = arena.playGames(args.arenaCompare, self.agent_type)
 
-            log.info('NEW/PREV WINS : %d / %d' % (nwins, pwins))
-            if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < args.updateThreshold:
-                log.info('REJECTING NEW MODEL')
-                self.nnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
+                log.info('NEW/PREV WINS : %d / %d' % (nwins, pwins))
+                if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < args.updateThreshold:
+                    log.info('REJECTING NEW MODEL')
+                    self.nnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
+                else:
+                    log.info('ACCEPTING NEW MODEL')
+                    self.nnet.save_checkpoint(folder=args.checkpoint,
+                                              filename=self.getCheckpointFile(self.current_episdoe))
+                    self.nnet.save_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
             else:
-                log.info('ACCEPTING NEW MODEL')
-                self.nnet.save_checkpoint(folder=args.checkpoint, filename=self.getCheckpointFile(self.current_episdoe))
+                self.nnet.save_checkpoint(folder=args.checkpoint,
+                                          filename=self.getCheckpointFile(self.current_episdoe))
                 self.nnet.save_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
 
         self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)  # initiate the mcts for next episode
