@@ -27,8 +27,8 @@ def main():
                         level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
     # create the game with the required agents
-    env = Game(device=torch.device("cuda" if torch.cuda.is_available() else "cpu"), agent_zombie=ConstantAgent,
-               agent_light=AlphaZeroAgent)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    env = Game(device, agent_zombie=ConstantAgent, agent_light=AlphaZeroAgent)
 
     # play the game and produce the dictionaries of the results
     episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)

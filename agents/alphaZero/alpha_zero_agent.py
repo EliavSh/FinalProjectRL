@@ -83,11 +83,12 @@ class AlphaZeroAgent(Agent):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
 
-        self.pi = self.mcts.getActionProb(state)
-
         if self.current_step < self.end_learning_step:
+            self.pi = self.mcts.getActionProb(state)
             return np.random.choice(len(self.pi), p=self.pi), rate, self.current_step
         else:
+            # Test phase, performs argmax of policy prediction
+            self.pi, _ = self.nnet.predict(state)
             return random.choice([i for i, v in enumerate(self.pi) if v == max(self.pi)]), rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
@@ -103,7 +104,7 @@ class AlphaZeroAgent(Agent):
                 f"Removing the oldest entry in trainExamples. len(trainExamplesHistory) = {len(self.train_examples_history)}")
             self.train_examples_history.pop(0)
 
-        if self.current_episdoe % self.num_episode_per_learning == 0:
+        if self.current_episdoe % self.num_episode_per_learning == 0 and self.current_step < self.end_learning_step:
             # once every 'something' episodes
             self.saveTrainExamples(self.current_episdoe)
 
