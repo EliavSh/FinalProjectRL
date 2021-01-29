@@ -28,7 +28,7 @@ def main():
 
     # create the game with the required agents
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = Game(device, agent_zombie=ConstantAgent, agent_light=AlphaZeroAgent)
+    env = Game(device, agent_zombie=ConstantAgent, agent_light=DdqnAgent)
 
     # play the game and produce the dictionaries of the results
     episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)
@@ -44,22 +44,25 @@ def main():
 if __name__ == "__main__":
     temp = 1
     if temp == 1:
-        for board in range(10, 25, 5):
-            # for cpuct in linspace(0.15, 1.65, 7):
-            path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
-                                'config.ini')
-            parser = RawConfigParser()
-            parser.read(path)
-            parser.set('MainInfo', 'board_height', str(board))
-            parser.set('MainInfo', 'board_width', str(board))
-            config_file = open(path, 'w')
-            parser.write(config_file, space_around_delimiters=True)
-            config_file.close()
+        for board in range(10, 31, 10):
+            for target_update in [500, 750, 1000]:
+                for memory_size in [3000, 4000, 5000]:
+                    path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
+                                        'config.ini')
+                    parser = RawConfigParser()
+                    parser.read(path)
+                    parser.set('MainInfo', 'board_height', str(board))
+                    parser.set('MainInfo', 'board_width', str(board))
+                    parser.set('DdqnAgentInfo', 'target_update', str(target_update))
+                    parser.set('DdqnAgentInfo', 'memory_size', str(memory_size))
+                    config_file = open(path, 'w')
+                    parser.write(config_file, space_around_delimiters=True)
+                    config_file.close()
 
-            # update all variables due to changes in the configuration file
-            Zombie.update_variables()
-            Node.update_variables()
+                    # update all variables due to changes in the configuration file
+                    Zombie.update_variables()
+                    Node.update_variables()
 
-            main()
+                    main()
     elif temp == 2:
         main()
