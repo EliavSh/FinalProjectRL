@@ -1,36 +1,43 @@
 from abc import abstractmethod
-
 import numpy as np
 import math
 
-from runnable_scripts.Utils import get_config
+from strategies.epsilonGreedyStrategy import EpsilonGreedyStrategy
 
 
-def calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE):
-    zombie_home_length = int(BOARD_HEIGHT - 2 * BOARD_WIDTH * math.tan(math.pi * ANGLE / 180))
+def calculate_start_positions(board_width, board_height, angle):
+    zombie_home_length = int(board_height - 2 * board_width * math.tan(math.pi * angle / 180))
     zombie_home_start_pos = int(
-        BOARD_HEIGHT - zombie_home_length - BOARD_WIDTH * math.tan(math.pi * ANGLE / 180))  # m-n-b
-    return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), BOARD_WIDTH)
+        board_height - zombie_home_length - board_width * math.tan(math.pi * angle / 180))  # m-n-b
+    return np.multiply(list(range(zombie_home_start_pos, zombie_home_start_pos + zombie_home_length)), board_width)
 
 
 class Agent:
-    @staticmethod
-    def update_variables():
-        Agent.BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-        Agent.BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-        Agent.ANGLE = float(get_config("MainInfo")['max_angle'])
 
-    # static field
-    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-    ANGLE = float(get_config("MainInfo")['max_angle'])
+    def __init__(self, agent_type, config):
+        main_info = config['MainInfo']
+        self.interactive_mode = bool(main_info['interactive_mode'])
+        self.display_width = int(main_info['display_width'])
+        self.display_height = int(main_info['display_height'])
+        self.num_train_episodes = int(main_info['num_train_episodes'])
+        self.num_test_episodes = int(main_info['num_test_episodes'])
+        self.zombies_per_episode = int(main_info['zombies_per_episode'])
+        self.check_point = int(main_info['check_point'])
+        self.light_size = int(main_info['light_size'])
+        self.board_height = int(main_info['board_height'])
+        self.board_width = int(main_info['board_width'])
+        self.max_angle = float(main_info['max_angle'])
+        self.max_velocity = int(main_info['max_velocity'])
+        self.dt = float(main_info['dt'])
+        self.max_hit_points = int(main_info['max_hit_points'])
+        self.heal_points = float(main_info['heal_points'])
 
-    def __init__(self, strategy, agent_type):
         self.agent_type = agent_type
-        self.strategy = strategy
-        self.possible_actions = list(range(len(calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT,
-                                                          Agent.ANGLE)))) if agent_type == "zombie" else list(
-            range(Agent.BOARD_HEIGHT * Agent.BOARD_WIDTH))
+        self.strategy = EpsilonGreedyStrategy(self.num_train_episodes, self.zombies_per_episode, self.board_width, config['StrategyInfo'])
+        self.possible_actions = list(
+            range(len(calculate_start_positions(self.board_width, self.board_height, self.max_angle)))) if agent_type == "zombie" else list(
+            range(self.board_height * self.board_width))
+        self.current_step = 0
 
     @abstractmethod
     def select_action(self, state):
@@ -40,9 +47,11 @@ class Agent:
     def learn(self, state, action, next_state, reward):
         raise NotImplementedError
 
+    @abstractmethod
     def reset(self):
         raise NotImplementedError
 
     def reset_start_pos(self):
-        Agent.update_variables()
-        self.possible_actions = calculate_start_positions(Agent.BOARD_WIDTH, Agent.BOARD_HEIGHT, Agent.ANGLE)
+        self.possible_actions = list(
+            range(len(calculate_start_positions(self.board_width, self.board_height, self.max_angle)))) if self.agent_type == "zombie" else list(
+            range(self.board_height * self.board_width))

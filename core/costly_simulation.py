@@ -1,17 +1,22 @@
 import copy
 import random
 import numpy as np
-
 from core.zombie import Zombie
-from environment.game import Game
 
 
 class CostlySimulation:
-    def __init__(self, simulation_depth, simulation_state, possible_actions, agent_type):
+    def __init__(self, simulation_depth, simulation_state, possible_actions, agent_type, board_height, board_width, max_angle, max_velocity, max_hit_points, dt, light_size):
         self.simulation_depth = simulation_depth
         self.simulation_state = simulation_state
         self.possible_actions = possible_actions
         self.agent_type = agent_type
+        self.board_height = board_height
+        self.board_width = board_width
+        self.max_angle = max_angle
+        self.max_velocity = max_velocity
+        self.max_hit_points = max_hit_points
+        self.dt = dt
+        self.light_size = light_size
 
     def costly_simulation(self, height, width):
         simulation_reward = 0
@@ -60,7 +65,7 @@ class CostlySimulation:
         reward = 0
         for index, z in enumerate(temp_alive_zombies):
             z.move(light_action)
-            if z.x >= Game.BOARD_WIDTH:
+            if z.x >= self.board_width:
                 if self.keep_alive(z.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
                     reward += 1
                 indices_to_remove.append(index)  # deleting a zombie that reached the border
@@ -69,8 +74,7 @@ class CostlySimulation:
         return reward, temp_alive_zombies
 
     def keep_alive(self, h):
-        eliav = self.simulation_depth
-        if h >= Game.MAX_HIT_POINTS:  # if the zombie sustained a lot of damaged
+        if h >= self.max_hit_points:  # if the zombie sustained a lot of damaged
             return False
         else:  # else decide by the sine function -> if the result is greater than 0.5 -> keep alive, else -> kill it (no reward for the zombie master)
             """
@@ -79,12 +83,11 @@ class CostlySimulation:
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
-            return np.power(h / Game.MAX_HIT_POINTS, 1 / 3) < random.random()
+            return np.power(h / self.max_hit_points, 1 / 3) < random.random()
 
     def create_zombie(self, position):
-        eliav = self.simulation_depth
-        if Game.MAX_ANGLE == 0:
-            angle = Game.MAX_ANGLE
+        if self.max_angle == 0:
+            angle = self.max_angle
         else:
-            angle = random.uniform(-Game.MAX_ANGLE, Game.MAX_ANGLE)
-        return Zombie(angle, Game.MAX_VELOCITY, position)
+            angle = random.uniform(-self.max_angle, self.max_angle)
+        return Zombie(angle, self.max_velocity, position, self.board_width, self.board_height, self.dt, self.light_size)

@@ -1,53 +1,36 @@
 import copy
-import math
 import os
 import random
 import multiprocessing as mp
 from environment.game import Game
 from agents.agent import Agent
 from strategies.epsilonGreedyStrategy import EpsilonGreedyStrategy
-from runnable_scripts.Utils import get_config
 from core.node import Node
 import numpy as np
 from core.costly_simulation import CostlySimulation
 
 
-def update_variables():
-    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
-    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
-    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    C = float(get_config("TreeAgentInfo")['exploration_const'])
-    return MAX_HIT_POINTS, MAX_ANGLE, MAX_VELOCITY, BOARD_WIDTH, BOARD_HEIGHT, C
-
-
 class BasicMCTSAgent(Agent):
-    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-    MAX_ANGLE = int(get_config("MainInfo")['max_angle'])
-    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
-    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    C = float(get_config("TreeAgentInfo")['exploration_const'])
+    def __init__(self, device, agent_type, config):
+        super().__init__(agent_type, config)
 
-    def __init__(self, device, agent_type):
-        BasicMCTSAgent.MAX_HIT_POINTS, BasicMCTSAgent.MAX_ANGLE, BasicMCTSAgent.MAX_VELOCITY, \
-            BasicMCTSAgent.BOARD_WIDTH, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.C = update_variables()
-        super().__init__(EpsilonGreedyStrategy(), agent_type)
-        self.root = Node([], self.possible_actions)
+        # load values from config
+        tree_agent_info = config['TreeAgentInfo']
+        self.simulation_num = int(tree_agent_info['simulation_num'])  # number of simulations in the simulation phase
+        self.simulation_depth = int(tree_agent_info['simulation_depth'])  # number of node expansions in a single simulation
+        self.exploration_const = float(tree_agent_info['exploration_const'])  # number of node expansions in a single simulation
+
+        self.root = Node([], self.possible_actions, self.board_width, self.zombies_per_episode)
         self.temporary_root = self.root  # TODO - change its name to something like: real world state-node
         self.current_step = 0
         self.simulation_reward = 0
-        self.simulation_num = int(get_config("TreeAgentInfo")['simulation_num'])  # number of simulations in the simulation phase
-        self.simulation_depth = int(get_config("TreeAgentInfo")['simulation_depth'])  # number of times to expand a node in single simulation
         self.episode_reward = 0
         self.tree_depth = 0
 
         self.pool = mp.Pool(mp.cpu_count())
 
-        main_info = get_config('MainInfo')
-        self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width'])
-        self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
+        self.steps_per_episodes = self.zombies_per_episode + self.board_width
+        self.total_episodes = self.num_train_episodes + self.num_test_episodes
 
     def select_action(self, state):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
@@ -195,7 +178,8 @@ class BasicMCTSAgent(Agent):
         assert node.num_children == len(self.possible_actions) or node.num_children == 0
         if node.num_children == 0:
             for action in actions:
-                _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action)
+                _, alive_zombies = BasicMCTSAgent.simulate_action(node.state, self.agent_type, action, self.board_height, self.board_width, self.max_angle,
+                                                                  self.max_velocity, self.max_hit_points, self.dt, self.light_size)
                 node.add_child(alive_zombies, action)
 
         return node.children
@@ -239,31 +223,37 @@ class BasicMCTSAgent(Agent):
         simulation_state = selected_child.state
 
         for _ in range(self.simulation_num):
-            obj = CostlySimulation(self.simulation_depth, simulation_state, self.possible_actions, self.agent_type)
+            obj = CostlySimulation(self.simulation_depth, simulation_state, self.possible_actions, self.agent_type, self.board_height, self.board_width,
+                                   self.max_angle, self.max_velocity, self.max_hit_points, self.dt, self.light_size)
             list_of_objects.append(obj)
 
-        list_of_results = self.pool.map(BasicMCTSAgent.worker,
-                                        ((obj, BasicMCTSAgent.BOARD_HEIGHT, BasicMCTSAgent.BOARD_WIDTH) for obj in
-                                         list_of_objects))
+        list_of_results = self.pool.map(BasicMCTSAgent.worker, ((obj, self.board_height, self.board_width) for obj in list_of_objects))
         assert np.max(list_of_results) <= self.simulation_depth
 
         average_total_reward = np.average(list_of_results) if self.agent_type == 'zombie' else -1 * np.average(
             list_of_results)
 
         # back-prop from the expanded child (the child of the selected node)
-        BasicMCTSAgent.back_propagation(selected_child, average_total_reward, self.root)
+        self.back_propagation(selected_child, average_total_reward, self.root)
 
     @staticmethod
     def worker(arg):
         return arg[0].costly_simulation(arg[1], arg[2])
 
     @staticmethod
-    def simulate_action(alive_zombies, agent_type, action):
+    def simulate_action(alive_zombies, agent_type, action, board_height, board_width, max_angle, max_velocity, max_hit_points, dt, light_size):
         """
         Simulating future states by 'actions' of an agent
+        :param max_velocity:
+        :param max_angle:
+        :param board_height: board height
+        :param board_width: board width
         :param alive_zombies: all alive zombies at the real world
         :param agent_type: 'zombie' or 'light' agent
         :param action: array containing all the actions to simulate
+        :param max_hit_points: max_hit_points
+        :param dt: dt
+        :param light_size: light_size
         :return: total reward of the simulation
         """
         new_alive_zombies = list(
@@ -277,39 +267,36 @@ class BasicMCTSAgent(Agent):
         else:
             light_action = action
             # sample n times from zombie-agent actions-space
-            zombie_action = np.random.randint(0, BasicMCTSAgent.BOARD_HEIGHT)
+            zombie_action = np.random.randint(0, board_height)
 
         # simulate and aggregate reward
         total_reward = 0
-        new_zombie = Game.create_zombie(zombie_action)
+        new_zombie = Game.create_zombie(zombie_action, max_angle, max_velocity, board_width, board_height, dt, light_size)
         new_alive_zombies.append(new_zombie)
-        reward, final_alive_zombies = Game.calc_reward_and_move_zombies(new_alive_zombies, light_action)
+        reward, final_alive_zombies = Game.calc_reward_and_move_zombies(new_alive_zombies, light_action, board_height, board_width, max_hit_points)
         total_reward += reward
 
         return total_reward, final_alive_zombies
 
-    @staticmethod
-    def back_propagation(node, result, root):
+    def back_propagation(self, node, result, root):
         current_node = node
 
         # Update node's weight.
-        BasicMCTSAgent.eval_utc(current_node, result)
+        self.eval_utc(current_node, result)
 
         # keep updating until the desired root
         while current_node.level != root.level:
             # Update parent node's weight.
             current_node = current_node.parent
-            BasicMCTSAgent.eval_utc(current_node, result)
+            self.eval_utc(current_node, result)
 
-    @staticmethod
-    def eval_utc(node, result):
+    def eval_utc(self, node, result):
         node.wins += result
         node.visits += 1
 
-        node.uct = node.wins / node.visits + BasicMCTSAgent.evaluate_exploration(node)
+        node.uct = node.wins / node.visits + self.evaluate_exploration(node)
 
-    @staticmethod
-    def evaluate_exploration(node):
+    def evaluate_exploration(self, node):
         n = node.visits
         if node.parent is None:
             t = node.visits
@@ -317,7 +304,7 @@ class BasicMCTSAgent(Agent):
             t = node.parent.visits
 
         # avoid log of 0 with: 't or 1'
-        return BasicMCTSAgent.C * np.sqrt(np.log(t or 1) / n)
+        return self.exploration_const * np.sqrt(np.log(t or 1) / n)
 
     @staticmethod
     def has_parent(node):

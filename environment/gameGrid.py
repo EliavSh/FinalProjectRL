@@ -1,17 +1,15 @@
 import numpy as np
-from runnable_scripts.Utils import get_config
 
 
 class GameGrid:
-    def __init__(self):
+    def __init__(self, board_height, board_width):
         """
         setting height and width of the game board - the only place with setting access
         :param height: int
         :param width: int
         """
-        main_info = get_config("MainInfo")
-        self.__height = int(main_info['board_height'])
-        self.__width = int(main_info['board_width'])
+        self.__height = board_height
+        self.__width = board_width
         self.__states = np.reshape(np.array(range(self.__height * self.__width)), [self.__height, self.__width])  # every state has its matching int
         self.__values = np.zeros([self.__height, self.__width])
 
