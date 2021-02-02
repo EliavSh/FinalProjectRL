@@ -1,7 +1,5 @@
 import math
-
 import numpy as np
-from runnable_scripts.Utils import get_config
 
 HEAL_EPSILON = 0.01
 
@@ -13,32 +11,19 @@ def calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE):
 
 
 class Zombie:
-    @staticmethod
-    def update_variables():
-        Zombie.BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-        Zombie.BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-        Zombie.LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
-        Zombie.DT = int(get_config("MainInfo")['dt'])
-        Zombie.ANGLE = float(get_config("MainInfo")['max_angle'])
-        Zombie.START_POSITIONS = calculate_start_positions(Zombie.BOARD_WIDTH, Zombie.BOARD_HEIGHT, Zombie.ANGLE)
-
     # static field
     ZOMBIE_NUM = 1
-    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-    LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
-    DT = int(get_config("MainInfo")['dt'])
-    ANGLE = float(get_config("MainInfo")['max_angle'])
-    START_POSITIONS = calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE)
 
-    def __init__(self, angle, velocity, state):
+    def __init__(self, angle, velocity, state, board_width, board_height, dt, light_size):
         """
-        :param id: int
+        :param board_width:
+        :param board_height:
+        :param dt:
+        :param light_size:
         :param angle: float, radians
         :param velocity: float, unit/sec
-        :param y: float
-        :param env: env_manager - when creating a zombie, we must specify in which env_manager he is born
         """
+
         self.id = Zombie.set_id()
         self.angle = angle
         self.velocity = velocity
@@ -46,12 +31,17 @@ class Zombie:
         # x,y are the real coordinates of the zombie
         self.x = 0  # every zombie starts at the left side
         self.v_x = self.velocity * np.cos(self.angle)
-        self.y = Zombie.START_POSITIONS[state] / Zombie.BOARD_WIDTH  # every zombie starts in an arbitrary positions by some distribution
+        # every zombie starts in an arbitrary positions by some distribution
+        self.y = calculate_start_positions(board_width, board_height, angle)[state] / board_width
         self.v_y = self.velocity * np.sin(self.angle)
         self.current_state = state
         # self.history = [(self.env.current_time, int(self.current_state[0]))]  # tuples of (timestamp, pos)
         self.heal_epsilon = HEAL_EPSILON
         self.just_born = True
+        self.dt = dt
+        self.light_size = light_size
+        self.board_height = board_height
+        self.board_width = board_width
 
     @staticmethod
     def set_id():
@@ -64,10 +54,10 @@ class Zombie:
         Zombie.ZOMBIE_NUM = 1
 
     def update_hit_points(self, light_action):
-        light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
-        light_y = int(light_action / Zombie.BOARD_WIDTH)
+        light_x = int(np.mod(light_action, self.board_width))
+        light_y = int(light_action / self.board_width)
         # include only the start (the end is outside the light)
-        if (light_x <= self.x < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= self.y < (light_y + Zombie.LIGHT_SIZE)):
+        if (light_x <= self.x < (light_x + self.light_size)) & (light_y <= self.y < (light_y + self.light_size)):
             # in a case of an hit, increase the zombie's hit points by 1
             self.hit_points += 1
         else:
@@ -86,9 +76,9 @@ class Zombie:
             self.just_born = False
         else:
             # next step, move forward and punish
-            self.x += self.v_x * Zombie.DT
-            self.y += self.v_y * Zombie.DT
-            self.current_state = self.x + self.y * Zombie.BOARD_HEIGHT
+            self.x += self.v_x * self.dt
+            self.y += self.v_y * self.dt
+            self.current_state = self.x + self.y * self.board_height
         # hit/heal the zombie
         self.update_hit_points(light_action)
 

@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import torch
 import torch.optim as optim
 from core.neuralNets.NeuralNet import NeuralNet
@@ -15,6 +14,7 @@ from agents.alphaZero.utils import dotdict, AverageMeter
 sys.path.append('../../')
 
 args = dotdict({
+    # TODO - move it to config file
     'lr': 0.001,
     'dropout': 0.3,
     'epochs': 10,

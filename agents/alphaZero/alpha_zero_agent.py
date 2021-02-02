@@ -11,70 +11,37 @@ from random import shuffle
 from agents.agent import Agent
 from agents.alphaZero.Arena import Arena
 from agents.alphaZero.MCTS import MCTS
-from agents.alphaZero.utils import dotdict
-from runnable_scripts.Utils import get_config
 from strategies.epsilonGreedyStrategy import EpsilonGreedyStrategy
-from core.neuralNets.NNet import NNetWrapper as nn
+from core.neuralNets.NNet import NNetWrapper
 
 log = logging.getLogger(__name__)
 
-args = dotdict({
-    # 'numIters': 1000,
-    # 'numEps': 100,  # Number of complete self-play games to simulate during a new iteration.
-    # 'tempThreshold': 15,  #
-    'updateThreshold': 0.6,
-    # During arena playoff, new neural net will be accepted if threshold or more of games are won.
-    # 'maxlenOfQueue': 200000,  # Number of game examples to train the neural networks.
-    # 'numMCTSSims': 5,  # Numbaer of games moves for MCTS to simulate.
-    'arenaCompare': 40,  # Number of games to play during arena play to determine if new net will be accepted.
-
-    'checkpoint': './temp/',
-    'load_model': False,
-    'load_folder_file': ('/dev/models/8x100x50', 'best.pth.tar'),
-    'train_examples_history': 200,
-
-})
-
 
 class AlphaZeroAgent(Agent):
-    @staticmethod
-    def update_variables():
-        AlphaZeroAgent.BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-        AlphaZeroAgent.BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-        AlphaZeroAgent.LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
-        AlphaZeroAgent.DT = int(get_config("MainInfo")['dt'])
-        AlphaZeroAgent.ANGLE = float(get_config("MainInfo")['max_angle'])
-        AlphaZeroAgent.CPUCT = float(get_config('AlphaZeroInfo')['cpuct'])
-        AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY = float(get_config('AlphaZeroInfo')['train_examples_history'])
-        return AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT, AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY
+    def __init__(self, device, agent_type, config):
+        super().__init__(agent_type, config)
 
-    # static field
-    ZOMBIE_NUM = 1
-    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-    LIGHT_SIZE = int(get_config("MainInfo")['light_size'])
-    DT = int(get_config("MainInfo")['dt'])
-    ANGLE = float(get_config("MainInfo")['max_angle'])
-    CPUCT = float(get_config('AlphaZeroInfo')['cpuct'])
-    TRAIN_EXAMPLES_HISTORY = float(get_config('AlphaZeroInfo')['train_examples_history'])
+        # load values from config
+        self.alpha_zero_info = config['AlphaZeroInfo']
+        self.num_episode_per_learning = int(self.alpha_zero_info['num_episode_per_learning'])
+        self.max_history_examples = int(self.alpha_zero_info['train_examples_history'])
+        self.cpuct = float(self.alpha_zero_info['cpuct'])
+        self.update_threshold = float(self.alpha_zero_info['update_threshold'])
+        self.arena_compare = int(self.alpha_zero_info['arena_compare'])
+        self.checkpoint = self.alpha_zero_info['checkpoint']
+        self.load_model = bool(self.alpha_zero_info['load_model'])
+        self.load_folder_file = self.alpha_zero_info['load_folder_file']
 
-    def __init__(self, device, agent_type):
-        super().__init__(EpsilonGreedyStrategy(), agent_type)
-        AlphaZeroAgent.BOARD_HEIGHT, AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.LIGHT_SIZE, AlphaZeroAgent.DT, AlphaZeroAgent.ANGLE, AlphaZeroAgent.CPUCT, AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY = AlphaZeroAgent.update_variables()
-        args['cpuct'] = AlphaZeroAgent.CPUCT
-
-        self.current_step = 0
-        self.num_episode_per_learning = int(get_config("AlphaZeroInfo")['num_episode_per_learning'])
-        self.current_episdoe = 0
-        self.end_learning_step = int(get_config('MainInfo')['num_train_episodes']) * (
-                int(get_config('MainInfo')['zombies_per_episode']) + int(get_config('MainInfo')['board_width']) + 2)
+        self.current_episode = 0
+        self.end_learning_step = self.num_train_episodes * (self.zombies_per_episode + self.board_width + 2)
 
         if agent_type == 'zombie':
-            self.nnet = nn(AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.BOARD_HEIGHT, len(self.possible_actions))
+            self.nnet = NNetWrapper(self.board_width, self.board_height, len(self.possible_actions))
         else:
-            self.nnet = nn(AlphaZeroAgent.BOARD_WIDTH, AlphaZeroAgent.BOARD_HEIGHT * 2, len(self.possible_actions))
+            self.nnet = NNetWrapper(self.board_width, self.board_height * 2, len(self.possible_actions))
         self.pnet = self.nnet
-        self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)
+        self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
+                         self.light_size, self.max_hit_points)
         self.pi = 0
         self.train_examples = []
         self.train_examples_history = []
@@ -98,15 +65,15 @@ class AlphaZeroAgent(Agent):
     def reset(self):
         self.train_examples_history.append(deepcopy(self.train_examples))
         self.train_examples = []
-        self.current_episdoe += 1
-        if len(self.train_examples_history) > AlphaZeroAgent.TRAIN_EXAMPLES_HISTORY:
+        self.current_episode += 1
+        if len(self.train_examples_history) > self.max_history_examples:
             log.debug(
                 f"Removing the oldest entry in trainExamples. len(trainExamplesHistory) = {len(self.train_examples_history)}")
             self.train_examples_history.pop(0)
 
-        if self.current_episdoe % self.num_episode_per_learning == 0 and self.current_step < self.end_learning_step:
+        if self.current_episode % self.num_episode_per_learning == 0 and self.current_step < self.end_learning_step:
             # once every 'something' episodes
-            self.saveTrainExamples(self.current_episdoe)
+            self.saveTrainExamples(self.current_episode)
 
             # shuffle examples before training
             trainExamples = []
@@ -115,42 +82,46 @@ class AlphaZeroAgent(Agent):
             shuffle(trainExamples)
 
             # training new network, keeping a copy of the old one
-            self.nnet.save_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
-            self.pnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
-            pmcts = MCTS(self.pnet, self.possible_actions, self.agent_type, args)
+            self.nnet.save_checkpoint(folder=self.checkpoint, filename='temp.pth.tar')
+            self.pnet.load_checkpoint(folder=self.checkpoint, filename='temp.pth.tar')
+            pmcts = MCTS(self.pnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
+                         self.light_size, self.max_hit_points)
 
             self.nnet.train(trainExamples)
-            nmcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)
+            nmcts = MCTS(self.nnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
+                         self.light_size, self.max_hit_points)
 
             # if self.current_step < self.end_learning_step:
             if self.current_step < -float('inf'):
                 log.info('PITTING AGAINST PREVIOUS VERSION')
                 arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
                               lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.possible_actions,
-                              self.agent_type)
-                pwins, nwins = arena.playGames(args.arenaCompare, self.agent_type)
+                              self.agent_type, self.board_height, self.board_width, self.zombies_per_episode, self.heal_points, self.max_hit_points, self.light_size)
+                pwins, nwins = arena.playGames(self.arena_compare)
 
                 log.info('NEW/PREV WINS : %d / %d' % (nwins, pwins))
-                if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < args.updateThreshold:
+                if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.update_threshold:
                     log.info('REJECTING NEW MODEL')
-                    self.nnet.load_checkpoint(folder=args.checkpoint, filename='temp.pth.tar')
+                    self.nnet.load_checkpoint(folder=self.checkpoint, filename='temp.pth.tar')
                 else:
                     log.info('ACCEPTING NEW MODEL')
-                    self.nnet.save_checkpoint(folder=args.checkpoint,
-                                              filename=self.getCheckpointFile(self.current_episdoe))
-                    self.nnet.save_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
+                    self.nnet.save_checkpoint(folder=self.checkpoint,
+                                              filename=self.getCheckpointFile(self.current_episode))
+                    self.nnet.save_checkpoint(folder=self.checkpoint, filename='best.pth.tar')
             else:
-                self.nnet.save_checkpoint(folder=args.checkpoint,
-                                          filename=self.getCheckpointFile(self.current_episdoe))
-                self.nnet.save_checkpoint(folder=args.checkpoint, filename='best.pth.tar')
+                self.nnet.save_checkpoint(folder=self.checkpoint,
+                                          filename=self.getCheckpointFile(self.current_episode))
+                self.nnet.save_checkpoint(folder=self.checkpoint, filename='best.pth.tar')
 
-        self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, args)  # initiate the mcts for next episode
+        self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
+                         self.light_size, self.max_hit_points)  # initiate the mcts for next episode
 
-    def getCheckpointFile(self, iteration):
+    @staticmethod
+    def getCheckpointFile(iteration):
         return 'checkpoint_' + str(iteration) + '.pth.tar'
 
     def saveTrainExamples(self, iteration):
-        folder = args.checkpoint
+        folder = self.checkpoint
         if not os.path.exists(folder):
             os.makedirs(folder)
         filename = os.path.join(folder, self.getCheckpointFile(iteration) + ".examples")
@@ -158,7 +129,7 @@ class AlphaZeroAgent(Agent):
         Pickler(f).dump(self.train_examples_history)
 
     def loadTrainExamples(self):
-        modelFile = os.path.join(args.load_folder_file[0], args.load_folder_file[1])
+        modelFile = self.load_folder_file
         examplesFile = modelFile + ".examples"
         if not os.path.isfile(examplesFile):
             log.warning(f'File "{examplesFile}" with trainExamples not found!')

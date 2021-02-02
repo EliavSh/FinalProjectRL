@@ -2,48 +2,32 @@ import copy
 import sys
 import time
 import os
+from configparser import ConfigParser
 import pygame
 import numpy as np
 from PIL import Image
-from tqdm import tqdm
-
 from environment.gameGrid import GameGrid
 import math
 import random
 from core.zombie import Zombie
 import torchvision.transforms as T
-from runnable_scripts.Utils import get_config, plot_progress
+from runnable_scripts.Utils import plot_progress
 from itertools import count
 import torch
 
 
-# from agents.alpha_zero_agent import AlphaZeroAgent
-# from core.alphaZero.coach import Coach
-
-def update_variables():
-    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-    MAX_ANGLE = int(get_config("MainInfo")['max_angle']) * math.pi / 180
-    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
-    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    HEAL_EPSILON = float(get_config("MainInfo")['heal_points'])
-    return MAX_HIT_POINTS, MAX_ANGLE, MAX_VELOCITY, BOARD_WIDTH, BOARD_HEIGHT, HEAL_EPSILON
-
-
+# TODO - order attributes of the class
 class Game:
-    MAX_HIT_POINTS = int(get_config("MainInfo")['max_hit_points'])
-    MAX_ANGLE = int(get_config("MainInfo")['max_angle']) * math.pi / 180
-    MAX_VELOCITY = int(get_config("MainInfo")['max_velocity'])
-    BOARD_WIDTH = int(get_config("MainInfo")['board_width'])
-    BOARD_HEIGHT = int(get_config("MainInfo")['board_height'])
-    HEAL_POINTS = float(get_config("MainInfo")['heal_points'])
-
     def __init__(self, device, agent_zombie, agent_light):
-        Game.MAX_HIT_POINTS, Game.MAX_ANGLE, Game.MAX_VELOCITY, Game.BOARD_WIDTH, Game.BOARD_HEIGHT, Game.HEAL_POINTS = update_variables()
-        main_info = get_config("MainInfo")
-        self.grid = GameGrid()
+        self.config_object = ConfigParser()
+        self.config_object.read(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'))
+        main_info = self.config_object["MainInfo"]
         self.light_size = int(main_info['light_size'])
         self.max_angle = int(main_info['max_angle'])
+        self.board_height = int(main_info['board_height'])
+        self.board_width = int(main_info['board_width'])
+
+        self.grid = GameGrid(self.board_height, self.board_width)
         self.start_positions = self.calculate_start_positions()
         if len(self.start_positions) < 2:
             print("The angle is too wide!")
@@ -61,14 +45,14 @@ class Game:
         else:
             os.environ["SDL_VIDEODRIVER"] = "dummy"  # not really necessary, here to make sure nothing will pop-up
         # set our agents
-        self.agent_zombie = agent_zombie(device, 'zombie')
-        self.agent_light = agent_light(device, 'light')
+        self.agent_zombie = agent_zombie(device, 'zombie', self.config_object)
+        self.agent_light = agent_light(device, 'light', self.config_object)
         # load main info
         self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width']) - 1
         self.check_point = int(main_info['check_point'])
         self.total_episodes = int(main_info['num_train_episodes']) + int(main_info['num_test_episodes'])
         # other fields
-        self.max_hit_points = Game.MAX_HIT_POINTS
+        self.max_hit_points = int(main_info['max_hit_points'])
         self.current_time = 0
         self.alive_zombies = []  # list of the currently alive zombies
         self.all_zombies = []  # list of all zombies (from all time)
@@ -176,21 +160,21 @@ class Game:
             self.update(light_action)
 
         # add new zombie
-        new_zombie = Game.create_zombie(zombie_action)
+        new_zombie = Game.create_zombie(zombie_action, self.max_angle, self.max_velocity, self.board_width, self.board_height, self.dt, self.light_size)
         self.alive_zombies.append(new_zombie)
         self.all_zombies.append(new_zombie)
 
         # move all zombies one step and calc reward
-        reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action)
+        reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action, self.board_height, self.board_width,
+                                                                       self.max_hit_points)
 
         self.done = self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
         return reward
 
     @staticmethod
-    def calc_reward_and_move_zombies(alive_zombies, light_action):
+    def calc_reward_and_move_zombies(alive_zombies, light_action, board_height, board_width, max_hit_points):
         """
         moving all zombies while aggregating and outputting current reward
-        :return all alive zombies (haven't step out of the grid)
         """
         # temp list for later be equal to self.alive_zombies list, it's here just for the for loop (NECESSARY!)
         new_alive_zombies = list(copy.deepcopy(alive_zombies))
@@ -198,18 +182,18 @@ class Game:
         indices_to_keep = list(range(len(new_alive_zombies)))
         for index, zombie in enumerate(new_alive_zombies):
             zombie.move(light_action)
-            if 0 > zombie.y or zombie.y >= Game.BOARD_HEIGHT:
+            if 0 > zombie.y or zombie.y >= board_height:
                 indices_to_keep.remove(index)
-            elif zombie.x >= Game.BOARD_WIDTH:
-                if Game.keep_alive(
-                        zombie.hit_points):  # decide whether to keep the zombie alive, if so, give the zombie master reward
+            elif zombie.x >= board_width:
+                # decide whether to keep the zombie alive, if so, give the zombie master reward
+                if Game.keep_alive(zombie.hit_points, max_hit_points):
                     reward += 1
                 indices_to_keep.remove(index)  # deleting a zombie that reached the border
         return reward, list(np.array(new_alive_zombies)[indices_to_keep])
 
     @staticmethod
-    def keep_alive(h):
-        if h >= Game.MAX_HIT_POINTS:  # if the zombie sustained a lot of damaged
+    def keep_alive(zombie_hit_points, max_hit_points):
+        if zombie_hit_points >= max_hit_points:  # if the zombie sustained a lot of damaged
             return False
         else:  # else decide by the sine function -> if the result is greater than 0.5 -> keep alive, else -> kill it (no reward for the zombie master)
             """
@@ -218,7 +202,7 @@ class Game:
              For example, if zombie hit points is 3 - > the result is 1 -> always return False (the random will never be greater than 1)
             in the past sin(h * pi / 2 * self.max_hit_points) < random.random()
             """
-            return np.power(h / Game.MAX_HIT_POINTS, 1 / 3) < random.random()
+            return np.power(zombie_hit_points / max_hit_points, 1 / 3) < random.random()
 
     def get_state(self):
         zombie_grid = self.grid.get_values()
@@ -231,22 +215,22 @@ class Game:
         return zombie_grid, np.concatenate((zombie_grid, health_grid))
 
     @staticmethod
-    def get_next_state(state, agent_type, action):
+    def get_next_state(state, agent_type, action, board_height, board_width, heal_points, max_hit_points, light_size):
         # only considering the case where dt = 1 AND angle = 0
         # here all we do is cut the last column of state and append with zeros
         # TODO - get next state with the impact of zombie and light exit
         if agent_type == 'zombie':
-            reward = sum(state[:, Game.BOARD_HEIGHT - 1])
+            reward = sum(state[:, board_height - 1])
             zombie_action = action
             # random sample len(actions) times from light-agent actions-space
-            light_action = np.random.randint(0, Game.BOARD_HEIGHT * Game.BOARD_WIDTH)
+            light_action = np.random.randint(0, board_height * board_width)
         else:
             light_action = action
             # sample n times from zombie-agent actions-space
-            zombie_action = np.random.randint(0, Game.BOARD_HEIGHT)
+            zombie_action = np.random.randint(0, board_height)
 
-            keep_alive_last_column_of_zombies = list(map(lambda x: Game.keep_alive(x), state[Game.BOARD_HEIGHT:, -1]))
-            reward = -sum(state[:Game.BOARD_HEIGHT, -1] * keep_alive_last_column_of_zombies)
+            keep_alive_last_column_of_zombies = list(map(lambda x: Game.keep_alive(x, max_hit_points), state[board_height:, -1]))
+            reward = -sum(state[:board_height, -1] * keep_alive_last_column_of_zombies)
 
         # extract new zombie
         new_first_column = np.expand_dims(np.array([0] * state.shape[0]), 1)
@@ -260,31 +244,32 @@ class Game:
 
         # update health state
         if agent_type == 'light':
-            light_x = int(np.mod(light_action, Zombie.BOARD_WIDTH))
-            light_y = int(light_action / Zombie.BOARD_WIDTH)
+            light_x = int(np.mod(light_action, board_width))
+            light_y = int(light_action / board_width)
             # loop over all zombies - by them positions
-            zombies_is, zombies_js = np.nonzero(new_state[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH])
+            zombies_is, zombies_js = np.nonzero(new_state[0:board_height, 0:board_width])
             for (i, j) in zip(zombies_is, zombies_js):
                 # include only the start (the end is outside the light)
-                if (light_x <= j < (light_x + Zombie.LIGHT_SIZE)) & (light_y <= i < (light_y + Zombie.LIGHT_SIZE)):
+                if (light_x <= j < (light_x + light_size)) & (light_y <= i < (light_y + light_size)):
                     # in a case of an hit, increase the zombie's hit points by 1
                     new_state[int(i + new_state.shape[0] / 2), j] += 1
                 else:
                     # heal the zombie by (1-epsilon)
-                    new_state[int(i + new_state.shape[0] / 2), j] *= (1 - Game.HEAL_POINTS)
+                    new_state[int(i + new_state.shape[0] / 2), j] *= (1 - heal_points)
 
         return new_state, reward
 
-    def get_pygame_window(self):
+    @staticmethod
+    def get_pygame_window():
         return pygame.surfarray.array3d(pygame.display.get_surface())
 
     @staticmethod
-    def create_zombie(position):
-        if Game.MAX_ANGLE == 0:
-            angle = Game.MAX_ANGLE
+    def create_zombie(position, max_angle, max_velocity, board_width, board_height, dt, light_size):
+        if max_angle == 0:
+            angle = max_angle
         else:
-            angle = random.uniform(-Game.MAX_ANGLE, Game.MAX_ANGLE)
-        return Zombie(angle, Game.MAX_VELOCITY, position)
+            angle = random.uniform(-max_angle, max_angle)
+        return Zombie(angle, max_velocity, position, board_width, board_height, dt, light_size)
 
     def set_up(self):
         # create the gameUtils directory if doesn't exist
@@ -312,7 +297,7 @@ class Game:
             os.path.join(path, 'grid.jpeg'))
 
     def update(self, light_action):
-        event = pygame.event.get()
+        event = pygame.event.get()  # this is here to stop pygame window crash on debug
         self.game_display.blit(self.grid_image, (0, 0))
         x_adjustment = int(self.display_width / self.grid.get_width())
         y_adjustment = int(self.display_height / self.grid.get_height())
@@ -342,7 +327,8 @@ class Game:
         path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "gameUtils")
         pygame.image.save(self.game_display, os.path.join(path, 'grid.jpeg'))
 
-    def end_game(self):
+    @staticmethod
+    def end_game():
         pygame.quit()
         quit()
 
@@ -366,7 +352,8 @@ class Game:
         screen = self.crop_screen(screen)
         return self.transform_screen_data(screen)
 
-    def crop_screen(self, screen):
+    @staticmethod
+    def crop_screen(screen):
         screen_height = screen.shape[1]
 
         # Strip off top and bottom
@@ -381,10 +368,6 @@ class Game:
         screen = torch.from_numpy(screen)
 
         # Use torchvision package to compose image transforms
-        resize = T.Compose([
-            T.ToPILImage()
-            , T.Resize((60, 30))
-            , T.ToTensor()
-        ])
+        resize = T.Compose([T.ToPILImage(), T.Resize((60, 30)), T.ToTensor()])
 
         return resize(screen).unsqueeze(0).to(self.device)  # add a batch dimension (BCHW)
