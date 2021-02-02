@@ -83,7 +83,7 @@ class DdqnAgent(Agent):
             with torch.no_grad():
                 # here we are getting the action from one pass along the network. after that we:
                 # convert the tensor to data, then move to cpu using then converting to numpy and lastly, wrapping back to tensor
-                action = self.policy_net(state).argmax(dim=0).data.cpu().numpy()[0]  # max over rows! (dim=0)
+                action = self.policy_net(state).argmax(dim=1).data.cpu().numpy()[0]  # TODO WTF is this: " max over rows! (dim=0) "
                 return action, rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
