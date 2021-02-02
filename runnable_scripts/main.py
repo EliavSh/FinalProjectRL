@@ -1,12 +1,7 @@
 import os
 import time
 import torch
-from numpy import linspace
-
 from configparser import RawConfigParser
-
-from core.node import Node
-from core.zombie import Zombie
 import logging
 
 
@@ -15,7 +10,9 @@ def main():
     from environment.game import Game
     from agents.random_agent import RandomAgent
     from agents.constant_agent import ConstantAgent
+    from agents.double_constant_agent import DoubleConstantAgent
     from agents.ddqn_agent import DdqnAgent
+    from agents.basic_mcts_agent import BasicMCTSAgent
     from agents.alphaZero.alpha_zero_agent import AlphaZeroAgent
     from runnable_scripts.Utils import create_dir, ridge_plot, save_ini_file
 
@@ -28,7 +25,7 @@ def main():
 
     # create the game with the required agents
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = Game(device, agent_zombie=ConstantAgent, agent_light=DdqnAgent)
+    env = Game(device, agent_zombie=DdqnAgent, agent_light=RandomAgent)
 
     # play the game and produce the dictionaries of the results
     episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)
@@ -58,10 +55,6 @@ if __name__ == "__main__":
                     config_file = open(path, 'w')
                     parser.write(config_file, space_around_delimiters=True)
                     config_file.close()
-
-                    # update all variables due to changes in the configuration file
-                    Zombie.update_variables()
-                    Node.update_variables()
 
                     main()
     elif temp == 2:

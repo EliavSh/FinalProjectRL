@@ -1,13 +1,9 @@
-from tqdm import tqdm
 import logging
 import math
-
 import numpy as np
-
 from environment.game import Game
-from runnable_scripts.Utils import get_config
 
-EPS = 1e-8
+EPS = 1e-8  # TODO - what is it used for? move it to config
 
 log = logging.getLogger(__name__)
 
@@ -17,13 +13,19 @@ class MCTS:
     This class handles the MCTS tree.
     """
 
-    def __init__(self, nnet, possible_actions, agent_type, args):
+    def __init__(self, nnet, possible_actions, agent_type, alpha_zero_info, board_height, board_width, heal_points, light_size, max_hit_points):
+        self.monte_carlo_searches = int(alpha_zero_info['monte_carlo_searches'])
+        self.monte_carlo_search_depth = int(alpha_zero_info['monte_carlo_search_depth'])
+        self.cpuct = float(alpha_zero_info['cpuct'])
+        self.board_height = board_height
+        self.board_width = board_width
+        self.heal_points = heal_points
+        self.light_size = light_size
+        self.max_hit_points = max_hit_points
+
         self.possible_actions = possible_actions
-        self.simulation_num = int(get_config("TreeAgentInfo")['simulation_num'])  # number of simulations in the simulation phase
-        self.simulation_depth = int(get_config("TreeAgentInfo")['simulation_depth'])  # number of simulations in the simulation phase
         self.agent_type = agent_type
         self.nnet = nnet
-        self.args = args
 
         self.Qsa = {}  # stores Q values for s,a (as defined in the paper)
         self.Nsa = {}  # stores #times edge s,a was visited
@@ -44,10 +46,10 @@ class MCTS:
                    proportional to Nsa[(s,a)]**(1./temp)
         """
         # TODO - add log at the right level that prints the time of searching
-        for _ in range(self.simulation_num):
-            self.search(canonicalBoard, 0, self.simulation_depth, 0)
+        for _ in range(self.monte_carlo_searches):
+            self.search(canonicalBoard, 0, self.monte_carlo_search_depth, 0)
 
-        s = canonicalBoard[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH].__str__()
+        s = canonicalBoard[0:self.board_height, 0:self.board_width].__str__()
 
         counts = [self.Nsa[(s, a)] if (s, a) in self.Nsa else 0 for a in range(len(self.possible_actions))]
 
@@ -84,7 +86,7 @@ class MCTS:
         """
 
         iteration += 1
-        s = canonicalBoard[0:Game.BOARD_HEIGHT, 0:Game.BOARD_WIDTH].__str__()
+        s = canonicalBoard[0:self.board_height, 0:self.board_width].__str__()
 
         self.Es[s] = iteration >= iteration_end
         if self.Es[s]:
@@ -121,17 +123,17 @@ class MCTS:
         for a in range(len(self.possible_actions)):
             if valids[a]:
                 if (s, a) in self.Qsa:
-                    u = self.Qsa[(s, a)] + self.args.cpuct * self.Ps[s][a] * math.sqrt(self.Ns[s]) / (
+                    u = self.Qsa[(s, a)] + self.cpuct * self.Ps[s][a] * math.sqrt(self.Ns[s]) / (
                             1 + self.Nsa[(s, a)])
                 else:
-                    u = self.args.cpuct * self.Ps[s][a] * math.sqrt(self.Ns[s] + EPS)  # Q = 0 ?
+                    u = self.cpuct * self.Ps[s][a] * math.sqrt(self.Ns[s] + EPS)  # Q = 0 ?
 
                 if u > cur_best:
                     cur_best = u
                     best_act = a
 
         a = best_act
-        next_s, temp_reward = Game.get_next_state(canonicalBoard, self.agent_type, a)
+        next_s, temp_reward = Game.get_next_state(canonicalBoard, self.agent_type, a, self.board_height, self.board_width, self.heal_points, self.max_hit_points, self.light_size)
         reward += temp_reward
         v = self.search(next_s, iteration, iteration_end, reward)
 
