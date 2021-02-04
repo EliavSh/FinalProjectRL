@@ -32,9 +32,6 @@ class AlphaZeroAgent(Agent):
         self.load_model = bool(self.alpha_zero_info['load_model'])
         self.load_folder_file = self.alpha_zero_info['load_folder_file']
 
-        self.current_episode = 0
-        self.end_learning_step = self.num_train_episodes * (self.zombies_per_episode + self.board_width + 2)
-
         if agent_type == 'zombie':
             self.nnet = NNetWrapper(self.board_width, self.board_height, len(self.possible_actions))
         else:
@@ -96,7 +93,8 @@ class AlphaZeroAgent(Agent):
                 log.info('PITTING AGAINST PREVIOUS VERSION')
                 arena = Arena(lambda x: np.argmax(pmcts.getActionProb(x, temp=0)),
                               lambda x: np.argmax(nmcts.getActionProb(x, temp=0)), self.possible_actions,
-                              self.agent_type, self.board_height, self.board_width, self.zombies_per_episode, self.heal_points, self.max_hit_points, self.light_size)
+                              self.agent_type, self.board_height, self.board_width, self.zombies_per_episode, self.heal_points, self.max_hit_points,
+                              self.light_size)
                 pwins, nwins = arena.playGames(self.arena_compare)
 
                 log.info('NEW/PREV WINS : %d / %d' % (nwins, pwins))

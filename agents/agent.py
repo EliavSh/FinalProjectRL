@@ -31,6 +31,7 @@ class Agent:
         self.dt = float(main_info['dt'])
         self.max_hit_points = int(main_info['max_hit_points'])
         self.heal_points = float(main_info['heal_points'])
+        self.end_learning_step = self.num_train_episodes * (self.zombies_per_episode + self.board_width)
 
         self.agent_type = agent_type
         self.strategy = EpsilonGreedyStrategy(self.num_train_episodes, self.zombies_per_episode, self.board_width, config['StrategyInfo'])
