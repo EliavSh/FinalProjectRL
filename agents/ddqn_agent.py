@@ -92,7 +92,7 @@ class DdqnAgent(Agent):
         next_state = torch.from_numpy(next_state).flatten().unsqueeze(0)
 
         self.memory.push(Experience(state, torch.tensor([action], device=self.device), next_state, torch.tensor([reward], device=self.device)))
-        if self.memory.can_provide_sample(self.batch_size):
+        if self.memory.can_provide_sample(self.batch_size) and self.current_step < self.end_learning_step:
             experiences = self.memory.sample(self.batch_size)
             states, actions, rewards, next_states = extract_tensors(experiences)
 

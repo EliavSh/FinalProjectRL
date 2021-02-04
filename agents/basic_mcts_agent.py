@@ -4,7 +4,6 @@ import random
 import multiprocessing as mp
 from environment.game import Game
 from agents.agent import Agent
-from strategies.epsilonGreedyStrategy import EpsilonGreedyStrategy
 from core.node import Node
 import numpy as np
 from core.costly_simulation import CostlySimulation
@@ -60,7 +59,8 @@ class BasicMCTSAgent(Agent):
         assert selected_child.num_children == 0 or selected_child.num_children == len(self.possible_actions)
 
         # simulation phase
-        self.simulation(expanded_child)
+        if self.current_step < self.end_learning_step:
+            self.simulation(expanded_child)
 
         # select next action
         action = self.select_expansion_action(self.temporary_root, self.possible_actions)
@@ -263,7 +263,7 @@ class BasicMCTSAgent(Agent):
         if agent_type == 'zombie':
             zombie_action = action
             # random sample len(actions) times from light-agent actions-space
-            light_action = np.random.randint(0, BasicMCTSAgent.BOARD_HEIGHT * BasicMCTSAgent.BOARD_WIDTH)
+            light_action = np.random.randint(0, board_height * board_width)
         else:
             light_action = action
             # sample n times from zombie-agent actions-space

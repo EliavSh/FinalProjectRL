@@ -3,17 +3,18 @@ import time
 import torch
 from configparser import RawConfigParser
 import logging
+from agents.random_agent import RandomAgent
+from agents.gaussian_agent import GaussianAgent
+from agents.constant_agent import ConstantAgent
+from agents.double_constant_agent import DoubleConstantAgent
+from agents.ddqn_agent import DdqnAgent
+from agents.basic_mcts_agent import BasicMCTSAgent
+from agents.alphaZero.alpha_zero_agent import AlphaZeroAgent
 
 
-def main():
+def main(l_agent, z_agent):
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "true"  # cancel py-game display
     from environment.game import Game
-    from agents.random_agent import RandomAgent
-    from agents.constant_agent import ConstantAgent
-    from agents.double_constant_agent import DoubleConstantAgent
-    from agents.ddqn_agent import DdqnAgent
-    from agents.basic_mcts_agent import BasicMCTSAgent
-    from agents.alphaZero.alpha_zero_agent import AlphaZeroAgent
     from runnable_scripts.Utils import create_dir, ridge_plot, save_ini_file
 
     # create directory for storing the results
@@ -25,7 +26,7 @@ def main():
 
     # create the game with the required agents
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = Game(device, agent_zombie=DdqnAgent, agent_light=RandomAgent)
+    env = Game(device, light_agent=l_agent, zombie_agent=z_agent)
 
     # play the game and produce the dictionaries of the results
     episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)
@@ -40,6 +41,9 @@ def main():
 
 if __name__ == "__main__":
     temp = 1
+    smart_agent = 'light'
+    light_agent = GaussianAgent
+    zombie_agent = ConstantAgent
     if temp == 1:
         for board in range(10, 31, 10):
             for target_update in [500, 750, 1000]:
@@ -50,12 +54,16 @@ if __name__ == "__main__":
                     parser.read(path)
                     parser.set('MainInfo', 'board_height', str(board))
                     parser.set('MainInfo', 'board_width', str(board))
+                    if smart_agent == 'zombie':
+                        parser.set('MainInfo', 'light_size', str(board // 3))
+                    else:
+                        parser.set('MainInfo', 'light_size', str(2))
                     parser.set('DdqnAgentInfo', 'target_update', str(target_update))
                     parser.set('DdqnAgentInfo', 'memory_size', str(memory_size))
                     config_file = open(path, 'w')
                     parser.write(config_file, space_around_delimiters=True)
                     config_file.close()
 
-                    main()
+                    main(light_agent, zombie_agent)
     elif temp == 2:
-        main()
+        main(light_agent, zombie_agent)
