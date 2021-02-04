@@ -292,8 +292,8 @@ class Game:
         # draw and save the grid
         self.draw_grid()
         # return the images in the pygame format
-        return pygame.image.load(os.path.join(path, 'zombie_image.PNG')), pygame.image.load(
-            os.path.join(path, 'light_image.PNG')), pygame.image.load(
+        return pygame.image.load(os.path.join(path, 'zombie_image.png')), pygame.image.load(
+            os.path.join(path, 'light_image.png')), pygame.image.load(
             os.path.join(path, 'grid.jpeg'))
 
     def update(self, light_action):
