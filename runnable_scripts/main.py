@@ -42,7 +42,7 @@ def main(l_agent, z_agent):
 if __name__ == "__main__":
     temp = 1
     smart_agent = 'light'
-    light_agent = DdqnAgent
+    light_agent = GaussianAgent
     zombie_agent = ConstantAgent
     if temp == 1:
         for board in range(10, 31, 10):
@@ -66,4 +66,4 @@ if __name__ == "__main__":
 
                     main(light_agent, zombie_agent)
     elif temp == 2:
-        main()
+        main(light_agent, zombie_agent)

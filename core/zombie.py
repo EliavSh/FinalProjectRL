@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-HEAL_EPSILON = 0.01
+HEAL_EPSILON = 0.97
 
 
 def calculate_start_positions(BOARD_WIDTH, BOARD_HEIGHT, ANGLE):
@@ -62,7 +62,7 @@ class Zombie:
             self.hit_points += 1
         else:
             # heal the zombie by (1-epsilon)
-            self.hit_points *= (1 - self.heal_epsilon)
+            self.hit_points *= self.heal_epsilon
 
     def move(self, light_action):
         """
