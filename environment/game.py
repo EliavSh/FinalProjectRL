@@ -18,7 +18,7 @@ import torch
 
 # TODO - order attributes of the class
 class Game:
-    def __init__(self, device, agent_zombie, agent_light):
+    def __init__(self, device, light_agent, zombie_agent):
         self.config_object = ConfigParser()
         self.config_object.read(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'))
         main_info = self.config_object["MainInfo"]
@@ -45,8 +45,8 @@ class Game:
         else:
             os.environ["SDL_VIDEODRIVER"] = "dummy"  # not really necessary, here to make sure nothing will pop-up
         # set our agents
-        self.agent_zombie = agent_zombie(device, 'zombie', self.config_object)
-        self.agent_light = agent_light(device, 'light', self.config_object)
+        self.agent_zombie = zombie_agent(device, 'zombie', self.config_object)
+        self.agent_light = light_agent(device, 'light', self.config_object)
         # load main info
         self.steps_per_episodes = int(main_info['zombies_per_episode']) + int(main_info['board_width']) - 1
         self.check_point = int(main_info['check_point'])
