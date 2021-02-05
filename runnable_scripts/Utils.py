@@ -19,26 +19,34 @@ log = logging.getLogger(__name__)
 
 
 def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, episodes_dict):
-    shutil.copyfile(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'),
-                    os.path.join(path, 'config.ini'))
-    writer = pd.ExcelWriter(path + results_file_name + '.xlsx')
-    pd.DataFrame(np.transpose(np.array(list(steps_dict_light.values()))), columns=list(steps_dict_light.keys())).set_index('step').to_excel(writer,
-                                                                                                                                            sheet_name='light_actions')
-    pd.DataFrame(np.transpose(np.array(list(steps_dict_zombie.values()))), columns=list(steps_dict_zombie.keys())).set_index('step').to_excel(writer,
-                                                                                                                                              sheet_name='zombie_actions')
+    shutil.copyfile(
+        os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'),
+        os.path.join(path, 'config.ini'))
+    writer = pd.ExcelWriter(os.path.join(path, results_file_name + '.xlsx'))
+    pd.DataFrame(np.transpose(np.array(list(steps_dict_light.values()))),
+                 columns=list(steps_dict_light.keys())).set_index('step').to_excel(writer,
+                                                                                   sheet_name='light_actions')
+    pd.DataFrame(np.transpose(np.array(list(steps_dict_zombie.values()))),
+                 columns=list(steps_dict_zombie.keys())).set_index('step').to_excel(writer,
+                                                                                    sheet_name='zombie_actions')
 
     config_main = get_config('MainInfo')
     config_ddqn = get_config('DdqnAgentInfo')
     config_strategy = get_config('StrategyInfo')
 
     pd.DataFrame(
-        {'info': [config_ddqn['target_update'], int(config_main['num_train_episodes']), int(config_main['num_test_episodes']),
-                  config_main['zombies_per_episode'], config_main['check_point'], config_ddqn['batch_size'], config_ddqn['gamma'], config_strategy['eps_start'],
-                  config_strategy['eps_end'], config_ddqn['memory_size'], config_ddqn['lr'], config_main['light_size']]},
-        index=['target_update', 'train_episodes', 'test_episodes', 'zombies_per_episode', 'check_point', 'batch_size', 'gamma', 'eps_start', 'eps_end',
+        {'info': [config_ddqn['target_update'], int(config_main['num_train_episodes']),
+                  int(config_main['num_test_episodes']),
+                  config_main['zombies_per_episode'], config_main['check_point'], config_ddqn['batch_size'],
+                  config_ddqn['gamma'], config_strategy['eps_start'],
+                  config_strategy['eps_end'], config_ddqn['memory_size'], config_ddqn['lr'],
+                  config_main['light_size']]},
+        index=['target_update', 'train_episodes', 'test_episodes', 'zombies_per_episode', 'check_point', 'batch_size',
+               'gamma', 'eps_start', 'eps_end',
                'memory_size', 'lr', 'light_size']).to_excel(writer, sheet_name='info')
 
-    pd.DataFrame({'reward': list(episodes_dict['episode_rewards']), 'episode_duration': episodes_dict['episode_durations']}).to_excel(
+    pd.DataFrame({'reward': list(episodes_dict['episode_rewards']),
+                  'episode_duration': episodes_dict['episode_durations']}).to_excel(
         writer, sheet_name='rewards summary')
     writer.save()
 
@@ -53,7 +61,8 @@ def create_dir():
 
 def get_config(config_topic, is_bool=False, bool_key=''):
     config_object = ConfigParser()
-    config_object.read(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'))
+    config_object.read(
+        os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'))
     return config_object.getboolean(config_topic, bool_key) if is_bool else config_object[config_topic]
 
 
@@ -94,7 +103,8 @@ def plot(values, moving_avg_period):
 
     moving_avg = get_moving_average(moving_avg_period, values)
     plt.plot(moving_avg)
-    log.info(str('Episode ' + str(len(values)) + ': ' + str(moving_avg_period) + ' episode moving avg of ' + str(moving_avg[-1])))
+    log.info(str('Episode ' + str(len(values)) + ': ' + str(moving_avg_period) + ' episode moving avg of ' + str(
+        moving_avg[-1])))
     return fig
 
 
@@ -111,7 +121,8 @@ def save_checkpoint(episode, target_net, policy_net, optimizer, loss, path):
 def rgb_generator(size):
     rgb_list = []
     for i in range(size):
-        rgb_list.append(tuple((np.random.uniform(0.2, 0.4), np.random.uniform(0.4, 0.6), np.random.uniform(0.6, 0.8), np.random.uniform(0.2, 0.8))))
+        rgb_list.append(tuple((np.random.uniform(0.2, 0.4), np.random.uniform(0.4, 0.6), np.random.uniform(0.6, 0.8),
+                               np.random.uniform(0.2, 0.8))))
     return rgb_list
 
 
@@ -123,7 +134,8 @@ def eps_action_hist(dir_path, xlsx_name, values_per_column, STEPS_PER_EPISODE):
 
         data = pd.DataFrame(
             data=np.transpose(
-                np.array([list(map(lambda x: x // values_per_column, np.array(list(output.index)))), np.array(output['action']), np.ones(len(output))])),
+                np.array([list(map(lambda x: x // values_per_column, np.array(list(output.index)))),
+                          np.array(output['action']), np.ones(len(output))])),
             columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
         rows = zip(data['step'] * values_per_column + values_per_column, data['action'], data['sum'])
         headers = ['step', 'action', 'sum']
@@ -143,29 +155,34 @@ def eps_action_hist(dir_path, xlsx_name, values_per_column, STEPS_PER_EPISODE):
             for i in range(len(margin_bottom)):
                 if not temp_df['step'].values.__contains__(values_per_column * (i + 1)):
                     temp_df = pd.concat(
-                        [temp_df.iloc[0:i, :], pd.DataFrame([values_per_column * (i + 1), action, 0], index=temp_df.columns.values).T, temp_df.iloc[i:, :]])
+                        [temp_df.iloc[0:i, :],
+                         pd.DataFrame([values_per_column * (i + 1), action, 0], index=temp_df.columns.values).T,
+                         temp_df.iloc[i:, :]])
 
             values = list(temp_df[temp_df['action'] == action].loc[:, 'sum'])
             mar_len = len(margin_bottom)  # length of margins, sometimes exceeds 10 - it's about not relevant residuals
-            temp_df.iloc[0:mar_len, :].plot.bar(x='step', y='sum', ax=ax, stacked=True, bottom=margin_bottom, color=colors[num], label=num)
+            temp_df.iloc[0:mar_len, :].plot.bar(x='step', y='sum', ax=ax, stacked=True, bottom=margin_bottom,
+                                                color=colors[num], label=num)
             margin_bottom += values[0:mar_len]
 
         # plt.show()
         # set the x-ticks as the episode value and other plot wrappers
         ax.set_xticklabels(
-            list(range(int(values_per_column // STEPS_PER_EPISODE), int(1 + 10 * values_per_column // STEPS_PER_EPISODE),
-                       int(values_per_column // STEPS_PER_EPISODE) or 1)),
+            list(
+                range(int(values_per_column // STEPS_PER_EPISODE), int(1 + 10 * values_per_column // STEPS_PER_EPISODE),
+                      int(values_per_column // STEPS_PER_EPISODE) or 1)),
             rotation=30)
         plt.xlabel('Episode', fontsize=14)
         plt.ylabel('Steps', fontsize=14)
         plt.title('Actions distribution along different ranges of episodes', fontsize=20)
         plt.tight_layout()
 
-        plt.savefig(dir_path + '\\' + sheet + '_hist.png')
+        plt.savefig(os.path.join(dir_path, sheet, '_hist.png'))
     print('finished plotting action hist')
 
 
-def save_check_point(dir, episode, episodes_dict, optimizer_light, optimizer_zombie, policy_net_light, policy_net_zombie, target_net_light,
+def save_check_point(dir, episode, episodes_dict, optimizer_light, optimizer_zombie, policy_net_light,
+                     policy_net_zombie, target_net_light,
                      target_net_zombie, CHECKPOINT):
     save_checkpoint(episode, target_net_zombie, policy_net_zombie, optimizer_zombie, 0,
                     dir + '/zombie.pth')
@@ -174,7 +191,8 @@ def save_check_point(dir, episode, episodes_dict, optimizer_light, optimizer_zom
     fig = plot(episodes_dict['episode_rewards'], CHECKPOINT)
     plt.savefig(dir + '/reward.png', bbox_inches='tight')
     plt.close(fig)
-    df = pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()), 'episode_duration': episodes_dict['episode_durations']})
+    df = pd.DataFrame({'reward': list(torch.cat(episodes_dict['episode_rewards'], -1).numpy()),
+                       'episode_duration': episodes_dict['episode_durations']})
     df.to_csv(dir + '/log.csv')
 
 
@@ -183,7 +201,8 @@ def plot_progress(path, episodes_dict, moving_average_period):
     fig = plot(episodes_dict['episode_rewards'], moving_average_period)
     plt.savefig(path + '/reward.png', bbox_inches='tight')
     plt.close(fig)
-    df = pd.DataFrame({'reward': list(episodes_dict['episode_rewards']), 'episode_duration': episodes_dict['episode_durations']})
+    df = pd.DataFrame(
+        {'reward': list(episodes_dict['episode_rewards']), 'episode_duration': episodes_dict['episode_durations']})
     df.to_csv(path + '/log.csv')
 
 
@@ -200,14 +219,16 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
     plt.style.use('dark_background')
     x_start = 1
     y_start = 0
-    rewards = pd.read_csv(dir_path + '\\log.csv', index_col=0)
+    rewards = pd.read_csv(os.path.join(dir_path, 'log.csv'), index_col=0)
     num_episodes = rewards.shape[0]
     number_of_graphs = 10
     episodes_per_graph = int(num_episodes / number_of_graphs)
     rewards_min = np.min(rewards['reward'])
     rewards_max = np.max(rewards['reward'])
 
-    light_data, zombie_data, num_of_learning_episodes = create_data_for_ultimate_plot(dir_path, xlsx_name, number_of_graphs, rewards.shape[0])
+    light_data, zombie_data, num_of_learning_episodes = create_data_for_ultimate_plot(dir_path, xlsx_name,
+                                                                                      number_of_graphs,
+                                                                                      rewards.shape[0])
 
     steps_light = [x for x in np.unique(light_data.step)]
     steps_zombie = [x for x in np.unique(zombie_data.step)]
@@ -226,7 +247,8 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
         x_d_zombie = np.linspace(x_start, len(x_zombie), len(x_zombie))
 
         # creating new axes object
-        ax_objs.append(fig.add_subplot(gs[i:(i + 1), -1]))  # candle plot - spreads over two vertical cells in the subplot grid
+        ax_objs.append(
+            fig.add_subplot(gs[i:(i + 1), -1]))  # candle plot - spreads over two vertical cells in the subplot grid
         ax_objs.append(fig.add_subplot(gs[i:(i + 1), 0:-1]))  # ridge plots
 
         # plotting zombie distribution
@@ -245,7 +267,8 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
         for iterator in range(len(elements)):
             plt.setp(bp[elements[iterator]], color=colors[iterator])
 
-        y_max = np.max(pd.concat([light_data[light_data['step'] == step]['sum'], zombie_data[zombie_data['step'] == step]['sum']]))
+        y_max = np.max(
+            pd.concat([light_data[light_data['step'] == step]['sum'], zombie_data[zombie_data['step'] == step]['sum']]))
 
         # setting uniform x and y lims - light
         ax_objs[-1].set_xlim(x_start, len(x_light))
@@ -272,23 +295,28 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
 
         if i == 0:  # first row, starting with 'Episodes' header
             remove_x_axis()
-            ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start, 'Episodes: \n\n' + str(int(step * episodes_per_graph) + 1) + ' - ' + str(
-                int(step * episodes_per_graph + episodes_per_graph)) + '\n', fontweight="bold", fontsize=14, ha="right", color='white')
+            ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
+                             'Episodes: \n\n' + str(int(step * episodes_per_graph) + 1) + ' - ' + str(
+                                 int(step * episodes_per_graph + episodes_per_graph)) + '\n', fontweight="bold",
+                             fontsize=14, ha="right", color='white')
         elif step * episodes_per_graph < num_of_learning_episodes:  # all the rows until the test episodes
             remove_x_axis()
             ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
-                             str(int(step * episodes_per_graph) + 1) + ' - ' + str(int(step * episodes_per_graph + episodes_per_graph)) + '\n',
+                             str(int(step * episodes_per_graph) + 1) + ' - ' + str(
+                                 int(step * episodes_per_graph + episodes_per_graph)) + '\n',
                              fontweight="bold", fontsize=14, ha="right", color='white')
         elif i != len(steps_zombie) - 1 and test_episodes_start_flag:  # first test episode, starting with header
             test_episodes_start_flag = False
             remove_x_axis()
             ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
                              'Test Episodes: \n\n' + str(int(step * episodes_per_graph) + 1) + ' - ' + str(
-                                 int(step * episodes_per_graph + episodes_per_graph)) + '\n', fontweight="bold", fontsize=14, ha="right", color='white')
+                                 int(step * episodes_per_graph + episodes_per_graph)) + '\n', fontweight="bold",
+                             fontsize=14, ha="right", color='white')
         elif i != len(steps_zombie) - 1:  # for all test episodes between the first and the last
             remove_x_axis()
             ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
-                             str(int(step * episodes_per_graph) + 1) + ' - ' + str(int(step * episodes_per_graph + episodes_per_graph)) + '\n',
+                             str(int(step * episodes_per_graph) + 1) + ' - ' + str(
+                                 int(step * episodes_per_graph + episodes_per_graph)) + '\n',
                              fontweight="bold", fontsize=14, ha="right", color='white')
         else:  # finally, the last row of test episodes
             ax_objs[-1].set_xlabel("Actions", fontsize=16, fontweight="bold", color='white')
@@ -296,7 +324,8 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
             ax_objs[-2].set_xlabel("Zombies survived", fontsize=14, fontweight="bold")
             plt.setp(plt.gcf().get_axes(), yticks=[])
             ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
-                             str(int(step * episodes_per_graph) + 1) + ' - ' + str(int(step * episodes_per_graph + episodes_per_graph)) + '\n',
+                             str(int(step * episodes_per_graph) + 1) + ' - ' + str(
+                                 int(step * episodes_per_graph + episodes_per_graph)) + '\n',
                              fontweight="bold", fontsize=14, ha="right", color='white')
 
     gs.update(hspace=-0.0)
@@ -307,25 +336,27 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
     plt.tight_layout(rect=(0, 0, 1, 0.95))
     plt.suptitle("Actions and rewards distribution along different ranges of episodes", fontsize=30, color='white')
 
-    plt.savefig(dir_path + '\\ultimate_ridge_box_plot.png', bbox_inches="tight")
+    plt.savefig(os.path.join(dir_path, 'ultimate_ridge_box_plot.png'), bbox_inches="tight")
     print('finished plotting action-reward ridge-box plots')
 
 
 def ridge_plot_train_test_separate(dir_path, xlsx_name, number_of_train_graphs, number_of_test_graphs):
     plt.style.use('dark_background')
-    rewards = pd.read_csv(dir_path + '\\log.csv', index_col=0)
+    rewards = pd.read_csv(os.path.join(dir_path, 'log.csv'), index_col=0)
 
-    light_data_train, light_data_test, zombie_data_train, zombie_data_test, num_training_episodes = create_data_for_separate_plot(dir_path, xlsx_name,
-                                                                                                                                  number_of_train_graphs,
-                                                                                                                                  number_of_test_graphs,
-                                                                                                                                  rewards.shape[0])
+    light_data_train, light_data_test, zombie_data_train, zombie_data_test, num_training_episodes = create_data_for_separate_plot(
+        dir_path, xlsx_name,
+        number_of_train_graphs,
+        number_of_test_graphs,
+        rewards.shape[0])
 
     train_proportion = round(num_training_episodes / rewards.shape[0], 2)
 
     rewards_train = rewards[np.array(rewards.index.array) < len(np.array(rewards.index.array)) * train_proportion]
     rewards_test = rewards[np.array(rewards.index.array) >= len(np.array(rewards.index.array)) * train_proportion]
-    train_test = [light_data_train, zombie_data_train, rewards_train, 'Train', number_of_train_graphs], [light_data_test, zombie_data_test, rewards_test,
-                                                                                                         'Test', number_of_test_graphs]
+    train_test = [light_data_train, zombie_data_train, rewards_train, 'Train', number_of_train_graphs], [
+        light_data_test, zombie_data_test, rewards_test,
+        'Test', number_of_test_graphs]
     for light_data, zombie_data, rewards, phase, number_of_graphs in train_test:
         test_padding = num_training_episodes if phase == 'Test' else 0
         light_data['step'] = number_of_graphs * np.array(light_data.index.array) // light_data.shape[0]
@@ -352,7 +383,8 @@ def ridge_plot_train_test_separate(dir_path, xlsx_name, number_of_train_graphs, 
             x_d_zombie = np.linspace(0, len(x_zombie), len(x_zombie))
 
             # creating new axes object
-            ax_objs.append(fig.add_subplot(gs[i:(i + 1), -1]))  # candle plot - spreads over two vertical cells in the subplot grid
+            ax_objs.append(
+                fig.add_subplot(gs[i:(i + 1), -1]))  # candle plot - spreads over two vertical cells in the subplot grid
             ax_objs.append(fig.add_subplot(gs[i:(i + 1), 0:-1]))  # ridge plots
 
             # plotting zombie distribution
@@ -371,7 +403,8 @@ def ridge_plot_train_test_separate(dir_path, xlsx_name, number_of_train_graphs, 
             for iterator in range(len(elements)):
                 plt.setp(bp[elements[iterator]], color=colors[iterator])
 
-            y_max = np.max([light_data[light_data['step'] == step]['sum'], zombie_data[zombie_data['step'] == step]['sum']])
+            y_max = np.max(
+                [light_data[light_data['step'] == step]['sum'], zombie_data[zombie_data['step'] == step]['sum']])
 
             # setting uniform x and y lims - light
             ax_objs[-1].set_xlim(x_start, len(x_light))
@@ -399,8 +432,10 @@ def ridge_plot_train_test_separate(dir_path, xlsx_name, number_of_train_graphs, 
             if i == 0:  # first row, starting with 'Episodes' header
                 remove_x_axis()
                 ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
-                                 phase + ' episodes: \n\n' + str(int(step * episodes_per_graph) + 1 + test_padding) + ' - ' + str(
-                                     int(step * episodes_per_graph + episodes_per_graph) + test_padding) + '\n', fontweight="bold", fontsize=14, ha="right",
+                                 phase + ' episodes: \n\n' + str(
+                                     int(step * episodes_per_graph) + 1 + test_padding) + ' - ' + str(
+                                     int(step * episodes_per_graph + episodes_per_graph) + test_padding) + '\n',
+                                 fontweight="bold", fontsize=14, ha="right",
                                  color='white')
             elif i != len(steps_zombie) - 1:  # all the rows until the test episodes
                 remove_x_axis()
@@ -420,13 +455,14 @@ def ridge_plot_train_test_separate(dir_path, xlsx_name, number_of_train_graphs, 
 
         gs.update(hspace=-0.0)
 
-        legend_elements = [Patch(facecolor='firebrick', label='Zombie'), Patch(facecolor='mediumseagreen', label='Light')]
+        legend_elements = [Patch(facecolor='firebrick', label='Zombie'),
+                           Patch(facecolor='mediumseagreen', label='Light')]
         plt.figlegend(handles=legend_elements, loc='lower left')
 
         plt.tight_layout(rect=(0, 0, 1, 0.95))
         plt.suptitle("Actions and rewards distribution along different ranges of episodes", fontsize=30, color='white')
 
-        plt.savefig(dir_path + '\\ultimate_ridge_box_plot_' + phase + '1.png', bbox_inches="tight")
+        plt.savefig(os.path.join(dir_path, 'ultimate_ridge_box_plot_' + phase + '1.png'), bbox_inches="tight")
         print('finished plotting action-reward ridge-box plot - ' + phase)
 
 
@@ -435,11 +471,12 @@ def create_data_for_ultimate_plot(dir_path, xlsx_name, number_of_graphs, num_of_
     datas = []
     df = 0
     for sheet in sheets:
-        df = pd.read_excel(dir_path + xlsx_name, sheet_name=sheet)
+        df = pd.read_excel(os.path.join(dir_path, xlsx_name), sheet_name=sheet)
         steps_per_range_of_episodes = df.shape[0] / number_of_graphs
         data = pd.DataFrame(
             data=np.transpose(
-                np.array([list(map(lambda x: x // steps_per_range_of_episodes, np.array(list(df.index)))), np.array(df['action']), np.ones(len(df))])),
+                np.array([list(map(lambda x: x // steps_per_range_of_episodes, np.array(list(df.index)))),
+                          np.array(df['action']), np.ones(len(df))])),
             columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
 
         n_actions = int(get_config('MainInfo')['board_height'])
@@ -447,7 +484,8 @@ def create_data_for_ultimate_plot(dir_path, xlsx_name, number_of_graphs, num_of_
         # make sure the first n_actions actions are there
         for i in range(n_actions):
             if int(data['action'][i]) != i:
-                data = pd.concat([data.iloc[0:i, :], pd.DataFrame([0, i, 0], index=data.columns.values, columns=[i]).T, data.iloc[i:, :]])
+                data = pd.concat([data.iloc[0:i, :], pd.DataFrame([0, i, 0], index=data.columns.values, columns=[i]).T,
+                                  data.iloc[i:, :]])
                 data.reset_index(drop=True, inplace=True)
 
         j = 1
@@ -458,14 +496,17 @@ def create_data_for_ultimate_plot(dir_path, xlsx_name, number_of_graphs, num_of_
             # check if row is missing! - we need to fill the next row with values
             if data['action'][j] != expected_value:
                 data = pd.concat([data.iloc[0:j, :],
-                                  pd.DataFrame([data['step'][j] if expected_value == 0 else data['step'][j - 1], expected_value, 0],
-                                               index=data.columns.values, columns=[j]).T, data.iloc[j:, :]])
+                                  pd.DataFrame(
+                                      [data['step'][j] if expected_value == 0 else data['step'][j - 1], expected_value,
+                                       0],
+                                      index=data.columns.values, columns=[j]).T, data.iloc[j:, :]])
                 j -= 1
                 data.reset_index(drop=True, inplace=True)
             j += 1
             # at the end of the loop, we need to verify the last step series has the exact number of actions
             if j == len(data) and data['action'][j - 1] != max_action and flag:
-                data = data.append(pd.DataFrame([data['step'][j - 1], max_action, 0], index=data.columns.values, columns=[j]).T)
+                data = data.append(
+                    pd.DataFrame([data['step'][j - 1], max_action, 0], index=data.columns.values, columns=[j]).T)
                 data.reset_index(drop=True, inplace=True)
                 flag = False
         datas.append(data)
@@ -475,14 +516,15 @@ def create_data_for_ultimate_plot(dir_path, xlsx_name, number_of_graphs, num_of_
 def create_data_for_separate_plot(dir_path, xlsx_name, number_of_train_graphs, number_of_test_graphs, num_of_episodes):
     datas = []
     for sheet in ['light_actions', 'zombie_actions']:
-        df = pd.read_excel(dir_path + xlsx_name, sheet_name=sheet)
+        df = pd.read_excel(os.path.join(dir_path, xlsx_name), sheet_name=sheet)
 
         # calc number of training episodes while considering backwards compatibility
         df_info = pd.read_excel(dir_path + xlsx_name, sheet_name='info', index_col=0)
         if 'num_train_episodes' in df_info.index.array:
             num_train_episodes = int(df_info.loc['num_train_episodes'])
         else:
-            num_train_episodes = math.ceil((df[df['epsilon'].diff() == 0].index[0] - 2) / ((df.shape[0] / num_of_episodes) - 1))
+            num_train_episodes = math.ceil(
+                (df[df['epsilon'].diff() == 0].index[0] - 2) / ((df.shape[0] / num_of_episodes) - 1))
 
         train_proportion = round(num_train_episodes / num_of_episodes, 2)
 
@@ -495,7 +537,8 @@ def create_data_for_separate_plot(dir_path, xlsx_name, number_of_train_graphs, n
             steps_per_range_of_episodes = df.shape[0] / number_of_graphs
             data = pd.DataFrame(
                 data=np.transpose(
-                    np.array([list(map(lambda x: x // steps_per_range_of_episodes, np.array(list(df.index)))), np.array(df['action']), np.ones(len(df))])),
+                    np.array([list(map(lambda x: x // steps_per_range_of_episodes, np.array(list(df.index)))),
+                              np.array(df['action']), np.ones(len(df))])),
                 columns=['step', 'action', 'sum']).groupby(['step', 'action']).sum().reset_index()
 
             j = 1
@@ -508,14 +551,16 @@ def create_data_for_separate_plot(dir_path, xlsx_name, number_of_train_graphs, n
                 # check if row is missing! - we need to fill the next row with values
                 if data['action'][j] != expected_value:
                     data = pd.concat([data.iloc[0:j, :],
-                                      pd.DataFrame([data['step'][j] if expected_value == 0 else data['step'][j - 1], expected_value, 0],
+                                      pd.DataFrame([data['step'][j] if expected_value == 0 else data['step'][j - 1],
+                                                    expected_value, 0],
                                                    index=data.columns.values, columns=[j]).T, data.iloc[j:, :]])
                     j -= 1
                     data.reset_index(drop=True, inplace=True)
                 j += 1
                 # at the end of the loop, we need to verify the last step series has the exact number of actions
                 if j == len(data) and data['action'][j - 1] != max_action and flag:
-                    data = data.append(pd.DataFrame([data['step'][j - 1], max_action, 0], index=data.columns.values, columns=[j]).T)
+                    data = data.append(
+                        pd.DataFrame([data['step'][j - 1], max_action, 0], index=data.columns.values, columns=[j]).T)
                     data.reset_index(drop=True, inplace=True)
                     flag = False
             datas.append(data)
@@ -531,23 +576,24 @@ if __name__ == '__main__':
         STEPS_PER_EPISODE = 200
         eps_action_hist(dir_path, xlsx_name, resolution, STEPS_PER_EPISODE)
     elif temp == 2:
-        dir_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), os.pardir)) + '\\results\\2020_10_17_at_22_28'
-        xlsx_name = '\\results_17_10_2020_22_28.xlsx'
+        dir_path = os.path.join(os.path.abspath(
+            os.path.join(os.path.dirname(__file__), os.pardir)), 'results', '2020_10_17_at_22_28')
+        xlsx_name = 'results_17_10_2020_22_28.xlsx'
         ridge_plot_train_test_together(dir_path=dir_path, xlsx_name=xlsx_name)
     elif temp == 3:
-        dir_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), os.pardir)) + '\\results\\2020_09_24_at_19_27'
-        xlsx_name = '\\results_24_09_2020_22_27.xlsx'
-        ridge_plot_train_test_separate(dir_path=dir_path, xlsx_name=xlsx_name, number_of_train_graphs=int(get_config('PlotInfo')['number_of_train_graphs']),
+        dir_path = os.path.join(os.path.abspath(
+            os.path.join(os.path.dirname(__file__), os.pardir)), 'results', '2020_09_24_at_19_27')
+        xlsx_name = 'results_24_09_2020_22_27.xlsx'
+        ridge_plot_train_test_separate(dir_path=dir_path, xlsx_name=xlsx_name,
+                                       number_of_train_graphs=int(get_config('PlotInfo')['number_of_train_graphs']),
                                        number_of_test_graphs=int(get_config('PlotInfo')['number_of_test_graphs']))
     elif temp == 4:
-        dir_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), os.pardir)) + '\\results\\fixed_light_size_3_range_of_board_5_30'
+        dir_path = os.path.join(os.path.abspath(
+            os.path.join(os.path.dirname(__file__), os.pardir)), "results", "fixed_light_size_3_range_of_board_5_30")
         for file in os.listdir(dir_path):
-            for f in os.listdir(dir_path + "\\" + file):
+            for f in os.listdir(os.path.join(dir_path, file)):
                 if f.endswith(".xlsx"):
-                    ridge_plot_train_test_together(dir_path=dir_path + "\\" + file + "\\", xlsx_name=f)
+                    ridge_plot_train_test_together(dir_path=os.path.join(dir_path, file), xlsx_name=f)
 
     print('eliav king')
 
