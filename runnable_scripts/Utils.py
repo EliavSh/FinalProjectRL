@@ -52,11 +52,14 @@ def save_ini_file(path, results_file_name, steps_dict_light, steps_dict_zombie, 
 
 
 def create_dir():
-    path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results",
-                        time.strftime('%Y_%m_%d') + "_at_" + time.strftime('%H_%M'))
-    if not os.path.exists(path):
-        os.mkdir(path)
-    return path
+    rewards_parent_path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results")
+    if not os.path.exists(rewards_parent_path):
+        os.mkdir(rewards_parent_path)
+
+    rewards_path = os.path.join(rewards_parent_path, time.strftime('%Y_%m_%d') + "_at_" + time.strftime('%H_%M'))
+    if not os.path.exists(rewards_path):
+        os.mkdir(rewards_path)
+    return rewards_path
 
 
 def get_config(config_topic, is_bool=False, bool_key=''):
