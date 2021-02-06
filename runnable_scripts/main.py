@@ -35,24 +35,24 @@ def main(l_agent, z_agent):
 
 if __name__ == "__main__":
     temp = 1
-    smart_agent = 'light'
-    light_agent = DdqnAgent
-    zombie_agent = ConstantAgent
+    smart_agent = 'zombie'
+    light_agent = ConstantAgent
+    zombie_agent = DdqnAgent
     if temp == 1:
-        # for board in range(10, 31, 10):
-        #     for target_update in [500, 750, 1000]:
+        for board in range(10, 31, 10):
+            for target_update in [500, 750, 1000]:
                 for memory_size in [3000, 4000, 5000]:
                     path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
                                         'config.ini')
                     parser = RawConfigParser()
                     parser.read(path)
-                    parser.set('MainInfo', 'board_height', str(30))
-                    parser.set('MainInfo', 'board_width', str(30))
+                    parser.set('MainInfo', 'board_height', str(board))
+                    parser.set('MainInfo', 'board_width', str(board))
                     if smart_agent == 'zombie':
-                        parser.set('MainInfo', 'light_size', str(30 // 3))
+                        parser.set('MainInfo', 'light_size', str(board // 3))
                     else:
                         parser.set('MainInfo', 'light_size', str(2))
-                    parser.set('DdqnAgentInfo', 'target_update', str(1000))
+                    parser.set('DdqnAgentInfo', 'target_update', str(target_update))
                     parser.set('DdqnAgentInfo', 'memory_size', str(memory_size))
                     config_file = open(path, 'w')
                     parser.write(config_file, space_around_delimiters=True)
