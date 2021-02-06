@@ -3,13 +3,7 @@ import time
 import torch
 from configparser import RawConfigParser
 import logging
-from agents.random_agent import RandomAgent
-from agents.gaussian_agent import GaussianAgent
-from agents.constant_agent import ConstantAgent
-from agents.double_constant_agent import DoubleConstantAgent
-from agents.ddqn_agent import DdqnAgent
-from agents.basic_mcts_agent import BasicMCTSAgent
-from agents.alphaZero.alpha_zero_agent import AlphaZeroAgent
+from agents import *
 
 
 def main(l_agent, z_agent):
