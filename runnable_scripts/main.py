@@ -35,9 +35,9 @@ def main(l_agent, z_agent):
 
 if __name__ == "__main__":
     temp = 1
-    smart_agent = 'light'
-    light_agent = GaussianAgent
-    zombie_agent = ConstantAgent
+    smart_agent = 'zombie'
+    light_agent = ConstantAgent
+    zombie_agent = DdqnAgent
     if temp == 1:
         for board in range(10, 31, 10):
             for target_update in [500, 750, 1000]:
