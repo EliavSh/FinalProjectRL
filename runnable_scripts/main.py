@@ -41,11 +41,9 @@ if __name__ == "__main__":
     if temp == 1:
         for iteration in [1, 2]:
             for board in range(10, 31, 10):
-                for simulation_num in [20, 50, 100]:
-                    for exploration_const in [0.5, 1, 1.5]:
-                        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
-                                            'configs',
-                                            'config.ini')
+                for simulation_num in [10, 20, 30]:
+                    for simulation_depth in [2, 3, 4]:
+                        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs', 'config.ini')
                         parser = RawConfigParser()
                         parser.read(path)
                         parser.set('MainInfo', 'board_height', str(board))
@@ -55,7 +53,7 @@ if __name__ == "__main__":
                         else:
                             parser.set('MainInfo', 'light_size', str(2))
                         parser.set('TreeAgentInfo', 'simulation_num', str(simulation_num))
-                        parser.set('TreeAgentInfo', 'exploration_const', str(exploration_const))
+                        parser.set('TreeAgentInfo', 'simulation_depth', str(simulation_depth))
                         config_file = open(path, 'w')
                         parser.write(config_file, space_around_delimiters=True)
                         config_file.close()

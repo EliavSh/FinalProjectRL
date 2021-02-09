@@ -291,7 +291,7 @@ class BasicMCTSAgent(Agent):
             self.eval_utc(current_node, result)
 
     def eval_utc(self, node, result):
-        node.wins += result
+        node.wins += result / self.simulation_depth
         node.visits += 1
 
         node.uct = node.wins / node.visits + self.evaluate_exploration(node)
