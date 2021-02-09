@@ -34,30 +34,32 @@ def main(l_agent, z_agent):
 
 
 if __name__ == "__main__":
-    temp = 2
+    temp = 1
     smart_agent = 'zombie'
-    light_agent = UniformAgent
-    zombie_agent = DdqnAgent
+    light_agent = ConstantAgent
+    zombie_agent = BasicMCTSAgent
     if temp == 1:
-        for board in range(10, 31, 10):
-            for target_update in [500, 750, 1000]:
-                for memory_size in [3000, 4000, 5000]:
-                    path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs',
-                                        'config.ini')
-                    parser = RawConfigParser()
-                    parser.read(path)
-                    parser.set('MainInfo', 'board_height', str(board))
-                    parser.set('MainInfo', 'board_width', str(board))
-                    if smart_agent == 'zombie':
-                        parser.set('MainInfo', 'light_size', str(board // 3))
-                    else:
-                        parser.set('MainInfo', 'light_size', str(2))
-                    parser.set('DdqnAgentInfo', 'target_update', str(target_update))
-                    parser.set('DdqnAgentInfo', 'memory_size', str(memory_size))
-                    config_file = open(path, 'w')
-                    parser.write(config_file, space_around_delimiters=True)
-                    config_file.close()
+        for iteration in [1, 2]:
+            for board in range(10, 31, 10):
+                for simulation_num in [20, 50, 100]:
+                    for exploration_const in [0.5, 1, 1.5]:
+                        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
+                                            'configs',
+                                            'config.ini')
+                        parser = RawConfigParser()
+                        parser.read(path)
+                        parser.set('MainInfo', 'board_height', str(board))
+                        parser.set('MainInfo', 'board_width', str(board))
+                        if smart_agent == 'zombie':
+                            parser.set('MainInfo', 'light_size', str(board // 3))
+                        else:
+                            parser.set('MainInfo', 'light_size', str(2))
+                        parser.set('TreeAgentInfo', 'simulation_num', str(simulation_num))
+                        parser.set('TreeAgentInfo', 'exploration_const', str(exploration_const))
+                        config_file = open(path, 'w')
+                        parser.write(config_file, space_around_delimiters=True)
+                        config_file.close()
 
-                    main(light_agent, zombie_agent)
+                        main(light_agent, zombie_agent)
     elif temp == 2:
         main(light_agent, zombie_agent)
