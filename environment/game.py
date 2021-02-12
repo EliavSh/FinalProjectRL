@@ -39,6 +39,8 @@ class Game:
             pygame.display.set_caption('pickleking')
             self.display_width = int(main_info['display_width'])
             self.display_height = int(main_info['display_height'])
+            # showing zombies hit points works only width equals twice the height
+            self.show_hit_points = True if self.board_width == self.board_height and self.display_width == 2 * self.display_height else False
             self.game_display = pygame.display.set_mode((self.display_width, self.display_height))
             self.zombie_image, self.light_image, self.grid_image = self.set_up()
             self.clock = pygame.time.Clock()
@@ -155,9 +157,6 @@ class Game:
                 whether it's time to reset the environment again.
         """
         self.current_time += 1
-        # update display in case of interactive mode
-        if self.interactive_mode:
-            self.update(light_action)
 
         # add new zombie
         new_zombie = Game.create_zombie(zombie_action, self.max_angle, self.max_velocity, self.board_width, self.board_height, self.dt, self.light_size)
@@ -167,6 +166,9 @@ class Game:
         # move all zombies one step and calc reward
         reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action, self.board_height, self.board_width,
                                                                        self.max_hit_points)
+        # update display in case of interactive mode
+        if self.interactive_mode:
+            self.update(light_action)
 
         self.done = self.current_time > self.steps_per_episodes  # TODO - maybe pick another terminal condition of the game and assign it to done (as True/False)
         return reward
@@ -301,11 +303,18 @@ class Game:
         self.game_display.blit(self.grid_image, (0, 0))
         x_adjustment = int(self.display_width / self.grid.get_width())
         y_adjustment = int(self.display_height / self.grid.get_height())
-        self.game_display.blit(self.light_image, (int(np.mod(light_action, self.grid.get_width()) * x_adjustment),
-                                                  int(light_action / self.grid.get_width()) * y_adjustment))
+        self.game_display.blit(self.light_image,
+                               (int(np.mod(light_action, self.grid.get_width()) * x_adjustment), int(light_action / self.grid.get_width()) * y_adjustment))
+
         for z in self.alive_zombies:
-            self.game_display.blit(self.zombie_image,
-                                   (z.x * x_adjustment, z.y * y_adjustment))
+            # set transparency value between 0 (fully transparent) and 255 (fully opaque)
+            self.zombie_image.set_alpha(30 if z.hit_points > self.max_hit_points else 120 + 135 * (1 - z.hit_points / self.max_hit_points))
+            self.game_display.blit(self.zombie_image, (z.x * x_adjustment, z.y * y_adjustment))
+            if self.show_hit_points:
+                # 1.4 is the ariel ratio of the numbers we show: 'x.yz'
+                zombie_box_height = self.zombie_image.get_height()
+                self.game_display.blit(pygame.font.SysFont("ariel", int(zombie_box_height // 1.4)).render(str(format(z.hit_points, '.2f')), 1, (0, 0, 0)),
+                                       (z.x * x_adjustment + 0.5 * zombie_box_height, z.y * y_adjustment + 0.25 * zombie_box_height))
         pygame.display.update()  # better than pygame.display.flip because it can update by param, and not the whole window
         self.clock.tick(30)  # the number of frames per second
 
