@@ -24,17 +24,18 @@ if __name__ == "__main__":
     learning_agent_topic = 'DdqnAgentInfo'
     boards = [10, 20, 30]
     params = {'memory_size': [3000, 4000, 5000], 'target_update': [500, 750, 1000]}
-    post_process = PostProcess(smart_agent, learning_agent_topic, boards, params)
+    post_process = PostProcess(smart_agent, learning_agent_topic, boards, params, period=50)
 
     df_dict, best_results = post_process.init_results_dicts()
 
     scenarios_list = post_process.get_list_dirs_relative_to_project_dir('final_results')
-    for player_type in ['light', 'zombie']:
+    for player_type in ['light', 'zombie']:  # TODO - make this an enum
         ddqn_pos, dumb_pos = (0, 2) if player_type == 'light' else (2, 0)
         all_games_of_agent = split_list_by_words_in_specific_position(list_of_scenarios=scenarios_list, words=['DDQN'], position=ddqn_pos)
         unique_games = split_list_by_words_in_specific_position(all_games_of_agent[0], ['Const', 'DoubleConst', 'Uniform', 'Gaussian'], dumb_pos)
 
-        fig, axes = post_process.create_figure(len(unique_games), player_type, 12, 9)
+        fig_header = smart_agent + ' Plays ' + PostProcess.upper_first_letter(player_type) + ' - Average Test Rewards'
+        fig, axes = post_process.create_figure(len(boards), len(unique_games), 12, 9, fig_header, 30)
 
         rewards_of_all_agents = dict(zip(list(map(lambda x: x[0], unique_games)), list(map(lambda x: dict(zip([*x, 'info'], [[], [], []])), unique_games))))
 

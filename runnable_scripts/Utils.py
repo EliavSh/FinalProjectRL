@@ -86,7 +86,8 @@ def get_moving_average(period, values):
     if len(values) >= period:
         moving_avg = values.unfold(dimension=0, size=period, step=1) \
             .mean(dim=1).flatten(start_dim=0)
-        moving_avg = torch.cat((torch.zeros(period - 1), moving_avg))
+        first_period = torch.zeros(period - 1) if values[0] >= 0 else torch.ones(period - 1) * -int(get_config('MainInfo')['zombies_per_episode'])
+        moving_avg = torch.cat((first_period, moving_avg))
         return moving_avg.numpy()
     else:
         moving_avg = torch.zeros(len(values))

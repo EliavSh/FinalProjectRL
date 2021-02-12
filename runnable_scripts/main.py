@@ -36,8 +36,8 @@ def main(l_agent, z_agent):
 if __name__ == "__main__":
     temp = 1
     smart_agent = 'zombie'
-    light_agent = ConstantAgent
-    zombie_agent = BasicMCTSAgent
+    light_agent = UniformAgent
+    zombie_agent = GaussianAgent
     if temp == 1:
         for iteration in [1, 2]:
             for board in range(10, 31, 10):

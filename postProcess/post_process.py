@@ -4,11 +4,13 @@ from configparser import ConfigParser
 from typing import List, Dict, Tuple, Any
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
+
+from runnable_scripts import Utils
 
 
 class PostProcess:
-    def __init__(self, smart_agent: str, learning_agent_topic: str, boards: List[int], params: Dict[str, List[int]]):
+    def __init__(self, smart_agent: str, learning_agent_topic: str, boards: List[int], params: Dict[str, List[int]], period: int):
+        self.moving_average_period = period
         self.smart_agent = smart_agent
         self.learning_agent_topic = learning_agent_topic
         self.boards = boards
@@ -16,12 +18,11 @@ class PostProcess:
         self.params_types = list(map(lambda x: type(x[0]), list(self.params.values())))
         self.project_dir = os.path.abspath(os.pardir)
         self.final_results_dir = os.path.join(os.path.abspath(os.pardir), 'final_results')
-        self.config_object = ConfigParser()
-        self.config_object.read(os.path.join(self.project_dir, 'configs', 'config.ini'))
         self.text_color = 'w'
         self.agents_types = ['Single Action Agent', 'Double Action Agent', 'Uniform Agent', 'Gaussian Agent']
         self.score_param = 'Average Test Reward'
         self.docs_dir = os.path.join(os.path.abspath(os.pardir), 'docs')
+        self.zombies_per_episode = 0  # to be filled
         self.fig = 'To be filled'
         self.axes = 'To be filled'
 
@@ -36,16 +37,16 @@ class PostProcess:
         final_scores_dict = {}
         for i, game in enumerate(games_list):
             for d in sorted(os.listdir(os.path.join(self.final_results_dir, game))):
-                rewards, information = self.get_reward_from_scenario(os.path.join(self.final_results_dir, game, d), topic, tuning_parameters,
-                                                                     player_type)
+                rewards, information, num_train_episodes = self.get_reward_from_scenario(os.path.join(self.final_results_dir, game, d), topic,
+                                                                                         tuning_parameters, player_type)
                 # save rewards for later
                 rewards_of_all_agents[list(rewards_of_all_agents.keys())[agent_type_index]][game].append(rewards.values)
-                # rewards_of_all_agents[list(rewards_of_all_agents.keys())[agent_type_index]][game] = [
-                #     *rewards_of_all_agents[list(rewards_of_all_agents.keys())[agent_type_index]][game], rewards.values]
+
                 # calculate mean test reward of the specific game
-                mean_test_reward = rewards[int(self.config_object['MainInfo']['num_train_episodes']):].mean()
+                mean_test_reward = rewards[num_train_episodes:].mean()
                 key = str(list(information.items()))
-                # average results in cases there more than 1 game of the specific scenario
+
+                # average results in cases there are more than 1 game of the specific scenario
                 if key in final_scores_dict.keys():
                     final_scores_dict[str(list(information.items()))] = [
                         (final_scores_dict[str(list(information.items()))][0] * i + mean_test_reward) / (i + 1), information]
@@ -55,18 +56,20 @@ class PostProcess:
         rewards_of_all_agents[list(rewards_of_all_agents.keys())[agent_type_index]]['info'] = list(map(lambda x: x[1][1], [*final_scores_dict.items()]))
         return final_scores_dict, rewards_of_all_agents
 
-    @staticmethod
-    def get_reward_from_scenario(path: str, topic: str, tuning_parameters: List[str], player_type: str) -> [pd.Series, dict]:
-        df = pd.read_csv(os.path.join(path, 'log.csv'))
-        conf = ConfigParser()  # TODO - get it from self...
+    def get_reward_from_scenario(self, path: str, topic: str, tuning_parameters: List[str], player_type: str) -> [pd.Series, dict, int]:
+        # load conf and set the value of zombies per episode
+        conf = ConfigParser()
         conf.read(os.path.join(path, 'config.ini'))
+        self.zombies_per_episode = int(conf['MainInfo']['zombies_per_episode'])
+
+        df = pd.read_csv(os.path.join(path, 'log.csv'))
         board = int(conf['MainInfo']['board_height'])
         info_dict = {'board': board}
         for param in tuning_parameters:
             info_dict[param] = conf[topic][param]
         # the players get opposite rewards
         multiplier = 1 if player_type == 'zombie' else -1
-        return df['reward'] * multiplier, info_dict
+        return df['reward'] * multiplier, info_dict, int(conf['MainInfo']['num_train_episodes'])
 
     def init_results_dicts(self) -> Tuple[Dict[int, pd.DataFrame], Dict[int, pd.DataFrame]]:
         df_dict = self.init_results_dict(self.params, self.boards)
@@ -82,11 +85,14 @@ class PostProcess:
             df_dictionary[board] = df
         return df_dictionary
 
-    def create_figure(self, number_of_games: int, player_type: str, width: int, height: int):
-        self.fig, self.axes = plt.subplots(len(self.boards), number_of_games, figsize=(width, height))
-        self.fig.suptitle(self.smart_agent + ' Plays ' + player_type.upper()[0] + player_type.lower()[1:] + ' - Average Test Rewards', fontsize=30,
-                          color=self.text_color)
+    def create_figure(self, num_row, num_col: int, width: int, height: int, header: str, font_size: int):
+        self.fig, self.axes = plt.subplots(num_row, num_col, figsize=(width, height))
+        self.fig.suptitle(header, fontsize=font_size, color=self.text_color)
         return self.fig, self.axes
+
+    @staticmethod
+    def upper_first_letter(string: str):
+        return string.upper()[0] + string.lower()[1:]
 
     def set_subplots_title(self, axes, two_players_game, i, j):
         params_keys = list(self.params.keys())
@@ -95,12 +101,12 @@ class PostProcess:
             axes[i][j].set_title(self.name_conversion(two_players_game[0]), color=self.text_color)
             axes[i][j].title.set_color(self.text_color)
         if j == 0:
-            lower = params_keys[0].split('_')[0]
-            axes[i][j].set_ylabel(lower.upper()[0] + lower[1:] + ' ' + params_keys[0].split('_')[1], color=self.text_color, fontsize=14)
+            axes[i][j].set_ylabel(self.upper_first_letter(params_keys[0].split('_')[0]) + ' ' + self.upper_first_letter(params_keys[0].split('_')[1]),
+                                  color=self.text_color, fontsize=14)
             axes[i][j].set_yticklabels(axes[i][j].get_yticklabels(), verticalalignment='center')
         if i == len(self.boards) - 1:
-            lower = params_keys[1].split('_')[0]
-            axes[i][j].set_xlabel(lower.upper()[0] + lower[1:] + ' ' + params_keys[1].split('_')[1], color=self.text_color, fontsize=14)
+            axes[i][j].set_xlabel(self.upper_first_letter(params_keys[1].split('_')[0]) + ' ' + self.upper_first_letter(params_keys[1].split('_')[1]),
+                                  color=self.text_color, fontsize=14)
         # remove x and y ticks of inner subplots
         if i != len(self.boards) - 1:
             axes[i][j].set_xticks([])
@@ -116,7 +122,7 @@ class PostProcess:
         threshold = 0.1
         if df_max - df_min < threshold:
             df_min = df_min - threshold if df_min - threshold > 0 else df_min
-            df_max = df_max + threshold if df_max + threshold < int(self.config_object['MainInfo']['zombies_per_episode']) else df_max
+            df_max = df_max + threshold if df_max + threshold < int(self.zombies_per_episode) else df_max
         return df_min, df_max
 
     def name_conversion(self, name: str) -> str:
@@ -163,21 +169,22 @@ class PostProcess:
                                                                encoding='utf-8-sig')
 
     def plot_comparison_results(self, rewards_of_all_agents: Dict[str, Dict[str, Any]], best_results: Dict[int, pd.DataFrame], player_type: str):
-        fig, axes = plt.subplots(len(self.boards), 1, figsize=(12, 9))  # TODO - unite with create_fig method
-        fig.suptitle('Comparison of ' + self.smart_agent + ' as ' + player_type.upper()[0] + player_type.lower()[1:] + ' Player vs. all Simple Agents',
-                     fontsize=28, color=self.text_color)
+        header = 'Comparison of ' + self.smart_agent + ' as ' + self.upper_first_letter(player_type) + ' Player vs. all Simple Agents'
+        fig, axes = self.create_figure(len(self.boards), 1, 12, 9, header, 28)
 
         for i, board in enumerate(self.boards):
             best_result = best_results[board]
             for j, scenario in enumerate(list(rewards_of_all_agents.keys())):
                 param_keys = list(self.params.keys())
-                # the most generic way to validate that the we are looking for, matches all the parameters
+                # the most generic way to validate the file we are looking for, matches all the parameters
                 best_rewards_series_index = np.argwhere(np.logical_and(np.logical_and(
                     np.array(list(map(lambda x: x[param_keys[0]], rewards_of_all_agents[scenario]['info']))) == str(
                         self.params_types[0](best_result.loc[self.agents_types[j], param_keys[0]])),
                     np.array(list(map(lambda x: x[param_keys[1]], rewards_of_all_agents[scenario]['info']))) == str(
                         self.params_types[0](best_result.loc[self.agents_types[j], param_keys[1]]))),
                     np.array(list(map(lambda x: x['board'], rewards_of_all_agents[scenario]['info']))) == board))
+
+                # summary the results in case of repetitions of the scenario
                 number_of_repetitions = 0
                 aggregated_best_rewards = np.zeros(len(rewards_of_all_agents[scenario][scenario][0]))
                 for scenario_repetition in list(rewards_of_all_agents[scenario].keys()):
@@ -186,9 +193,10 @@ class PostProcess:
                         aggregated_best_rewards += rewards_of_all_agents[scenario][scenario_repetition][best_rewards_series_index[0][0]]
                 if number_of_repetitions == 0:
                     print('Something is wrong! the scenario of: ' + scenario + ' is empty')
+
                 average_best_rewards_along_episodes = aggregated_best_rewards / number_of_repetitions
-                # plot, set legend, set ticks to chosen color
-                axes[i].plot(average_best_rewards_along_episodes, label=self.agents_types[j])
+                # plot moving average, set legend, set ticks to chosen color
+                axes[i].plot(Utils.get_moving_average(self.moving_average_period, average_best_rewards_along_episodes), label=self.agents_types[j])
                 axes[i].legend(loc='best')
                 axes[i].tick_params(colors=self.text_color, which='both')
             # set edge_color of axis as white
