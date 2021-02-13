@@ -1,0 +1,13 @@
+﻿,memory_size,target_update,Average Test Reward
+Single Action Agent,4000.0,750.0,-0.03
+Double Action Agent,4000.0,750.0,-0.11
+Uniform Agent,3000.0,1000.0,-0.48
+Gaussian Agent,5000.0,500.0,-0.53
+Single Action Agent,5000.0,500.0,-0.08
+Double Action Agent,4000.0,750.0,-0.04
+Uniform Agent,5000.0,1000.0,-14.99
+Gaussian Agent,3000.0,1000.0,-11.94
+Single Action Agent,3000.0,500.0,-0.06
+Double Action Agent,5000.0,1000.0,-0.2
+Uniform Agent,5000.0,1000.0,-18.11
+Gaussian Agent,3000.0,750.0,-17.57

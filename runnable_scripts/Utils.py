@@ -100,7 +100,7 @@ def plot(values, moving_avg_period):
 
     fig = plt.figure(2)
     plt.clf()
-    plt.title('Training...')
+    plt.title('Total Rewards over Episodes')
     plt.xlabel('Episode')
     plt.ylabel('Total Zombies Survived')
     plt.plot(values)

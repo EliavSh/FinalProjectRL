@@ -36,7 +36,7 @@ class Game:
         self.interactive_mode = main_info.getboolean('interactive_mode')
         if self.interactive_mode:
             pygame.init()
-            pygame.display.set_caption('pickleking')
+            pygame.display.set_caption('Light against Zombies')
             self.display_width = int(main_info['display_width'])
             self.display_height = int(main_info['display_height'])
             # showing zombies hit points works only width equals twice the height
