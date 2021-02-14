@@ -42,7 +42,7 @@ class Game:
             # showing zombies hit points works only width equals twice the height
             self.show_hit_points = True if self.board_width == self.board_height and self.display_width == 2 * self.display_height else False
             self.game_display = pygame.display.set_mode((self.display_width, self.display_height))
-            self.zombie_image, self.light_image, self.grid_image = self.set_up()
+            self.zombie_image, self.eliminated_zombie, self.light_image, self.grid_image = self.set_up()
             self.clock = pygame.time.Clock()
         else:
             os.environ["SDL_VIDEODRIVER"] = "dummy"  # not really necessary, here to make sure nothing will pop-up
@@ -281,25 +281,30 @@ class Game:
             os.chmod(path, 777)
         # get images
         zombie_image = Image.open(os.path.join(path, 'zombie.png'))
+        eliminated_zombie_image = Image.open(os.path.join(path, 'eliminated_zombie.png'))
         light_image = Image.open(os.path.join(path, 'light.png'))
         # resize (light_image is doubled for 2x2 cells)
         zombie_image = zombie_image.resize(
+            (int(self.display_width / self.grid.get_width()), int(self.display_height / self.grid.get_height())), 0)
+        eliminated_zombie_image = eliminated_zombie_image.resize(
             (int(self.display_width / self.grid.get_width()), int(self.display_height / self.grid.get_height())), 0)
         light_image = light_image.resize(
             (int(self.display_width / self.grid.get_width()) * self.light_size,
              int(self.display_height / self.grid.get_height()) * self.light_size), 0)
         # save
         zombie_image.save(os.path.join(path, 'zombie_image.png'))
+        eliminated_zombie_image.save(os.path.join(path, 'eliminated_zombie_image.png'))
         light_image.save(os.path.join(path, 'light_image.png'))
         # draw and save the grid
         self.draw_grid()
         # return the images in the pygame format
         return pygame.image.load(os.path.join(path, 'zombie_image.png')), pygame.image.load(
+            os.path.join(path, 'eliminated_zombie_image.png')), pygame.image.load(
             os.path.join(path, 'light_image.png')), pygame.image.load(
             os.path.join(path, 'grid.jpeg'))
 
     def update(self, light_action):
-        event = pygame.event.get()  # this is here to stop pygame window crash on debug
+        event = pygame.event.get()  # this is here to prevent pygame window from crushing while debugging
         self.game_display.blit(self.grid_image, (0, 0))
         x_adjustment = int(self.display_width / self.grid.get_width())
         y_adjustment = int(self.display_height / self.grid.get_height())
@@ -308,12 +313,13 @@ class Game:
 
         for z in self.alive_zombies:
             # set transparency value between 0 (fully transparent) and 255 (fully opaque)
-            self.zombie_image.set_alpha(30 if z.hit_points > self.max_hit_points else 120 + 135 * (1 - z.hit_points / self.max_hit_points))
-            self.game_display.blit(self.zombie_image, (z.x * x_adjustment, z.y * y_adjustment))
+            # self.zombie_image.set_alpha(5 if z.hit_points > self.max_hit_points else 155 + 100 * (1 - z.hit_points / self.max_hit_points))
+            zombie_image = self.zombie_image if z.hit_points < self.max_hit_points else self.eliminated_zombie
+            self.game_display.blit(zombie_image, (z.x * x_adjustment, z.y * y_adjustment))
             if self.show_hit_points:
                 # 1.4 is the ariel ratio of the numbers we show: 'x.yz'
-                zombie_box_height = self.zombie_image.get_height()
-                self.game_display.blit(pygame.font.SysFont("ariel", int(zombie_box_height // 1.4)).render(str(format(z.hit_points, '.2f')), 1, (0, 0, 0)),
+                zombie_box_height = zombie_image.get_height()
+                self.game_display.blit(pygame.font.SysFont("ariel", int(zombie_box_height // 1.4)).render(str(format(z.hit_points, '.2f')), 1, (255, 255, 255)),
                                        (z.x * x_adjustment + 0.5 * zombie_box_height, z.y * y_adjustment + 0.25 * zombie_box_height))
         pygame.display.update()  # better than pygame.display.flip because it can update by param, and not the whole window
         self.clock.tick(30)  # the number of frames per second
