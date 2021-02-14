@@ -134,5 +134,6 @@ dmypy.json
 /results/old/*
 /gameUtils/*
 !/gameUtils/zombie.png
+!/gameUtils/eliminated_zombie.png
 !/gameUtils/light.png
 /temp/*
