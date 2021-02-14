@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 class AlphaZeroAgent(Agent):
     def __init__(self, device, agent_type, config):
         super().__init__(agent_type, config)
+        self.current_episode = 0
 
         # load values from config
         self.alpha_zero_info = config['AlphaZeroInfo']
