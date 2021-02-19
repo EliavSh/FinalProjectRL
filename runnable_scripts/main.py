@@ -36,24 +36,25 @@ def main(l_agent, z_agent):
 if __name__ == "__main__":
     temp = 1
     smart_agent = 'zombie'
-    light_agent = UniformAgent
-    zombie_agent = GaussianAgent
+    light_agent = ConstantAgent
+    zombie_agent = BasicMCTSAgent
     if temp == 1:
         for iteration in [1, 2]:
             for board in range(10, 31, 10):
-                for simulation_num in [10, 20, 30]:
-                    for simulation_depth in [2, 3, 4]:
-                        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), 'configs', 'config.ini')
+                for simulation_num in [15, 30, 45]:
+                    for exploration_const in [1.2, 1.4, 1.6]:
+                        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
+                                            'configs', 'config.ini')
                         parser = RawConfigParser()
                         parser.read(path)
                         parser.set('MainInfo', 'board_height', str(board))
                         parser.set('MainInfo', 'board_width', str(board))
-                        if smart_agent == 'zombie':
+                        if issubclass(zombie_agent, Agent):  # if the zombie player is smart, light is bigger
                             parser.set('MainInfo', 'light_size', str(board // 3))
                         else:
                             parser.set('MainInfo', 'light_size', str(2))
                         parser.set('TreeAgentInfo', 'simulation_num', str(simulation_num))
-                        parser.set('TreeAgentInfo', 'simulation_depth', str(simulation_depth))
+                        parser.set('TreeAgentInfo', 'exploration_const', str(exploration_const))
                         config_file = open(path, 'w')
                         parser.write(config_file, space_around_delimiters=True)
                         config_file.close()
