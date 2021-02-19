@@ -5,3 +5,4 @@ from agents.gaussian_agent import GaussianAgent
 from agents.ddqn_agent import DdqnAgent
 from agents.basic_mcts_agent import BasicMCTSAgent
 from agents.alphaZero.alpha_zero_agent import AlphaZeroAgent
+from agents.agent import Agent
