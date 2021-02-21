@@ -34,15 +34,14 @@ def main(l_agent, z_agent):
 
 
 if __name__ == "__main__":
-    temp = 2
-    smart_agent = 'zombie'
+    temp = 1
     light_agent = ConstantAgent
-    zombie_agent = BasicMCTSAgent
+    zombie_agent = AlphaZeroAgent
     if temp == 1:
         for iteration in [1, 2]:
             for board in range(10, 31, 10):
-                for simulation_num in [15, 30, 45]:
-                    for exploration_const in [1.2, 1.4, 1.6]:
+                for monte_carlo_searches in [20, 50, 100]:
+                    for cpuct in [0.5, 1, 1.5]:
                         path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
                                             'configs', 'config.ini')
                         parser = RawConfigParser()
@@ -53,8 +52,8 @@ if __name__ == "__main__":
                             parser.set('MainInfo', 'light_size', str(board // 3))
                         else:
                             parser.set('MainInfo', 'light_size', str(2))
-                        parser.set('TreeAgentInfo', 'simulation_num', str(simulation_num))
-                        parser.set('TreeAgentInfo', 'exploration_const', str(exploration_const))
+                        parser.set('AlphaZeroInfo', 'monte_carlo_searches', str(monte_carlo_searches))
+                        parser.set('AlphaZeroInfo', 'cpuct', str(cpuct))
                         config_file = open(path, 'w')
                         parser.write(config_file, space_around_delimiters=True)
                         config_file.close()
