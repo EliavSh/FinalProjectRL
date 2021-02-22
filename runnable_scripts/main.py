@@ -34,13 +34,13 @@ def main(l_agent, z_agent):
 
 
 if __name__ == "__main__":
-    temp = 1
+    temp = 2
     light_agent = ConstantAgent
     zombie_agent = AlphaZeroAgent
     if temp == 1:
         for iteration in [1, 2]:
             for board in range(10, 31, 10):
-                for monte_carlo_searches in [20, 50, 100]:
+                for monte_carlo_searches in [5, 10, 15]:
                     for cpuct in [0.5, 1, 1.5]:
                         path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
                                             'configs', 'config.ini')
