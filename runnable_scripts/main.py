@@ -34,7 +34,7 @@ def main(l_agent, z_agent):
 
 
 if __name__ == "__main__":
-    temp = 2
+    temp = 1
     light_agent = ConstantAgent
     zombie_agent = AlphaZeroAgent
     if temp == 1:
