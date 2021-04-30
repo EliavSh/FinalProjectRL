@@ -6,19 +6,22 @@ from configparser import ConfigParser
 import pygame
 import numpy as np
 from PIL import Image
-from environment.gameGrid import GameGrid
 import math
 import random
-from core.zombie import Zombie
-import torchvision.transforms as T
-from runnable_scripts.Utils import plot_progress
-from itertools import count
 import torch
+from itertools import count
+import tensorflow as tf
+import torchvision.transforms as T
+from torch.utils.tensorboard import SummaryWriter
+
+from environment.gameGrid import GameGrid
+from core.zombie import Zombie
+from runnable_scripts.Utils import plot_progress
 
 
-# TODO - order attributes of the class
 class Game:
-    def __init__(self, device, light_agent, zombie_agent):
+
+    def __init__(self, device, light_agent, zombie_agent, dir_path):
         self.config_object = ConfigParser()
         self.config_object.read(os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "configs", 'config.ini'))
         main_info = self.config_object["MainInfo"]
@@ -64,6 +67,18 @@ class Game:
         self.current_screen = None
         self.done = False
 
+        self.results_path = dir_path
+        self.writer = self.init_tensorboard_writer()
+
+    def init_tensorboard_writer(self):
+        tf.reset_default_graph()
+        writer = SummaryWriter(self.results_path)
+        if not self.agent_light.get_neural_network() is None:
+            writer.add_graph(self.agent_light.get_neural_network(), torch.from_numpy(self.get_state()[1]).flatten().unsqueeze(0))
+        if not self.agent_zombie.get_neural_network() is None:
+            writer.add_graph(self.agent_zombie.get_neural_network(), torch.from_numpy(self.get_state()[0]).flatten().unsqueeze(0))
+        return writer
+
     def calculate_start_positions(self):
         zombie_home_length = int(
             self.grid.get_height() - 2 * self.grid.get_width() * math.tan(self.max_angle * math.pi / 180))
@@ -81,7 +96,7 @@ class Game:
         self.agent_light.reset()
         self.agent_zombie.reset()
 
-    def play_zero_sum_game(self, path):
+    def play_zero_sum_game(self):
         self.agent_light.reset_start_pos()
         self.agent_zombie.reset_start_pos()
 
@@ -100,13 +115,17 @@ class Game:
 
                 # update dict
                 steps_dict_light['epsilon'].append(rate)
+                self.writer.add_scalar("Epsilon Value", rate, self.agent_light.current_step)
                 steps_dict_light['action'].append(int(action_light // self.grid.get_width()))
+                self.writer.add_histogram("Action of Light Player", int(action_light // self.grid.get_width()), self.agent_light.current_step)
                 steps_dict_light['step'].append(time_step)
                 steps_dict_zombie['epsilon'].append(rate)
                 steps_dict_zombie['action'].append(int(action_zombie))
+                self.writer.add_histogram("Action of Zombie Player", int(action_zombie), self.agent_zombie.current_step)
                 steps_dict_zombie['step'].append(time_step)
 
                 reward = self.apply_actions(action_zombie, action_light)
+
                 zombie_master_reward += reward
                 next_state_zombie, next_state_light = self.get_state()
 
@@ -118,15 +137,17 @@ class Game:
 
                 if self.done:  # if the episode is done, store it's reward and plot the moving average
                     episodes_dict['episode_rewards'].append(zombie_master_reward)
+                    self.writer.add_scalar("Episode Reward", zombie_master_reward, episode)
                     episodes_dict['episode_durations'].append(time.time() - episode_start_time)
+                    self.writer.add_scalar("Episode Duration", time.time() - episode_start_time, episode)
                     break
 
             # plotting the moving average
             if episode % self.check_point == 0:
-                plot_progress(path, episodes_dict, self.check_point)
+                plot_progress(self.results_path, episodes_dict, self.check_point)
 
-        plot_progress(path, episodes_dict, self.check_point)
-
+        plot_progress(self.results_path, episodes_dict, self.check_point)
+        self.writer.close()
         return episodes_dict, steps_dict_light, steps_dict_zombie
 
     def action_space(self):
@@ -386,3 +407,4 @@ class Game:
         resize = T.Compose([T.ToPILImage(), T.Resize((60, 30)), T.ToTensor()])
 
         return resize(screen).unsqueeze(0).to(self.device)  # add a batch dimension (BCHW)
+# TODO - order attributes of the class
