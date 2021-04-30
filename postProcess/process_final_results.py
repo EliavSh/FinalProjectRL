@@ -20,10 +20,10 @@ def split_list_by_words_in_specific_position(list_of_scenarios: List[str], words
 
 
 if __name__ == "__main__":
-    smart_agent = 'DDQN'
-    learning_agent_topic = 'DdqnAgentInfo'
+    smart_agent = 'AlphaZero'
+    learning_agent_topic = 'AlphaZeroInfo'
     boards = [10, 20, 30]
-    params = {'memory_size': [3000, 4000, 5000], 'target_update': [500, 750, 1000]}
+    params = {'monte_carlo_searches': [5, 10, 15], 'cpuct': [0.5, 1., 1.5]}
     post_process = PostProcess(smart_agent, learning_agent_topic, boards, params, period=50)
 
     df_dict, best_results = post_process.init_results_dicts()
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     scenarios_list = post_process.get_list_dirs_relative_to_project_dir('final_results')
     for player_type in ['light', 'zombie']:  # TODO - make this an enum
         ddqn_pos, dumb_pos = (0, 2) if player_type == 'light' else (2, 0)
-        all_games_of_agent = split_list_by_words_in_specific_position(list_of_scenarios=scenarios_list, words=['DDQN'], position=ddqn_pos)
+        all_games_of_agent = split_list_by_words_in_specific_position(list_of_scenarios=scenarios_list, words=[smart_agent], position=ddqn_pos)
         unique_games = split_list_by_words_in_specific_position(all_games_of_agent[0], ['Const', 'DoubleConst', 'Uniform', 'Gaussian'], dumb_pos)
 
         fig_header = smart_agent + ' Plays ' + PostProcess.upper_first_letter(player_type) + ' - Average Test Rewards'
@@ -45,7 +45,7 @@ if __name__ == "__main__":
             for values in mean_test_score_dict.values():
                 info = values[1]
                 params_keys = list(params.keys())
-                df_dict[info['board']].loc[int(info[params_keys[0]])][int(info[params_keys[1]])] = values[0]
+                df_dict[info['board']].loc[float(info[params_keys[0]])][float(info[params_keys[1]])] = values[0]
 
             best_results = post_process.calc_and_save_best_scores(df_dict, best_results, j)
 

@@ -65,8 +65,8 @@ class PostProcess:
         df = pd.read_csv(os.path.join(path, 'log.csv'))
         board = int(conf['MainInfo']['board_height'])
         info_dict = {'board': board}
-        for param in tuning_parameters:
-            info_dict[param] = conf[topic][param]
+        for i, param in enumerate(tuning_parameters):
+            info_dict[param] = str(self.params_types[i](conf[topic][param]))
         # the players get opposite rewards
         multiplier = 1 if player_type == 'zombie' else -1
         return df['reward'] * multiplier, info_dict, int(conf['MainInfo']['num_train_episodes'])
@@ -101,11 +101,11 @@ class PostProcess:
             axes[i][j].set_title(self.name_conversion(two_players_game[0]), color=self.text_color)
             axes[i][j].title.set_color(self.text_color)
         if j == 0:
-            axes[i][j].set_ylabel(self.upper_first_letter(params_keys[0].split('_')[0]) + ' ' + self.upper_first_letter(params_keys[0].split('_')[1]),
+            axes[i][j].set_ylabel(self.underscore_separated_sentence_to_real_sentence(params_keys, 0),
                                   color=self.text_color, fontsize=14)
             axes[i][j].set_yticklabels(axes[i][j].get_yticklabels(), verticalalignment='center')
         if i == len(self.boards) - 1:
-            axes[i][j].set_xlabel(self.upper_first_letter(params_keys[1].split('_')[0]) + ' ' + self.upper_first_letter(params_keys[1].split('_')[1]),
+            axes[i][j].set_xlabel(self.underscore_separated_sentence_to_real_sentence(params_keys, 1),
                                   color=self.text_color, fontsize=14)
         # remove x and y ticks of inner subplots
         if i != len(self.boards) - 1:
@@ -117,6 +117,13 @@ class PostProcess:
         c_bar = axes[i][j].collections[0].colorbar
         c_bar.ax.tick_params(colors=self.text_color, which='both')
 
+    def underscore_separated_sentence_to_real_sentence(self, lst: List, index_to_separate):
+        under_scored_sentence = lst[index_to_separate]
+        final_sentence = ''
+        for word in under_scored_sentence.split('_'):
+            final_sentence = final_sentence + self.upper_first_letter(word) + ' '
+        return final_sentence
+
     def adjusted_color_bar(self, df_dictionary: Dict[int, pd.DataFrame], i: int) -> Tuple[int, int]:
         df_min, df_max = df_dictionary[self.boards[i]].min().min(), df_dictionary[self.boards[i]].max().max()
         threshold = 0.1
@@ -126,14 +133,14 @@ class PostProcess:
         return df_min, df_max
 
     def name_conversion(self, name: str) -> str:
-        converter = {'Const_vs_DDQN': self.agents_types[0],
-                     'DoubleConst_vs_DDQN': self.agents_types[1],
-                     'Uniform_vs_DDQN': self.agents_types[2],
-                     'Gaussian_vs_DDQN': self.agents_types[3],
-                     'DDQN_vs_Const': self.agents_types[0],
-                     'DDQN_vs_DoubleConst': self.agents_types[1],
-                     'DDQN_vs_Uniform': self.agents_types[2],
-                     'DDQN_vs_Gaussian': self.agents_types[3]}
+        converter = {'Const_vs_' + self.smart_agent: self.agents_types[0],
+                     'DoubleConst_vs_' + self.smart_agent: self.agents_types[1],
+                     'Uniform_vs_' + self.smart_agent: self.agents_types[2],
+                     'Gaussian_vs_' + self.smart_agent: self.agents_types[3],
+                     self.smart_agent + '_vs_Const': self.agents_types[0],
+                     self.smart_agent + '_vs_DoubleConst': self.agents_types[1],
+                     self.smart_agent + '_vs_Uniform': self.agents_types[2],
+                     self.smart_agent + '_vs_Gaussian': self.agents_types[3]}
         if name in converter.keys():
             return converter[name]
         else:
@@ -164,9 +171,10 @@ class PostProcess:
 
     def save_results(self, axes, fig, player_type: str, best_results):
         self.add_board_annotation_and_tight(fig, axes)
-        fig.savefig(os.path.join(self.docs_dir, 'DDQN_avg_test_rewards', 'DDQN as ' + player_type + '.png'), transparent=True)
-        pd.concat(list(best_results.values())).round(2).to_csv(os.path.join(self.docs_dir, 'DDQN_avg_test_rewards', 'Best_of_' + player_type + '.csv'),
-                                                               encoding='utf-8-sig')
+        fig.savefig(os.path.join(self.docs_dir, self.smart_agent + '_avg_test_rewards', self.smart_agent + ' as ' + player_type + '.png'), transparent=True)
+        pd.concat(list(best_results.values())).round(2).to_csv(
+            os.path.join(self.docs_dir, self.smart_agent + '_avg_test_rewards', 'Best_of_' + player_type + '.csv'),
+            encoding='utf-8-sig')
 
     def plot_comparison_results(self, rewards_of_all_agents: Dict[str, Dict[str, Any]], best_results: Dict[int, pd.DataFrame], player_type: str):
         header = 'Comparison of ' + self.smart_agent + ' as ' + self.upper_first_letter(player_type) + ' Player vs. all Simple Agents'
@@ -181,7 +189,7 @@ class PostProcess:
                     np.array(list(map(lambda x: x[param_keys[0]], rewards_of_all_agents[scenario]['info']))) == str(
                         self.params_types[0](best_result.loc[self.agents_types[j], param_keys[0]])),
                     np.array(list(map(lambda x: x[param_keys[1]], rewards_of_all_agents[scenario]['info']))) == str(
-                        self.params_types[0](best_result.loc[self.agents_types[j], param_keys[1]]))),
+                        self.params_types[1](best_result.loc[self.agents_types[j], param_keys[1]]))),
                     np.array(list(map(lambda x: x['board'], rewards_of_all_agents[scenario]['info']))) == board))
 
                 # summary the results in case of repetitions of the scenario
@@ -207,4 +215,5 @@ class PostProcess:
                 axes[i].set_xlabel('Episode', color=self.text_color, fontsize=14)
 
         self.add_board_annotation_and_tight(fig, axes)
-        fig.savefig(os.path.join(self.docs_dir, 'DDQN_avg_test_rewards', 'Comparison of DDQN as ' + player_type + '.png'), transparent=True)
+        fig.savefig(os.path.join(self.docs_dir, self.smart_agent + '_avg_test_rewards', 'Comparison of ' + self.smart_agent + ' as ' + player_type + '.png'),
+                    transparent=True)
