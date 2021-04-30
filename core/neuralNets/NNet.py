@@ -32,8 +32,8 @@ class NNetWrapper(NeuralNet):
 
         self.board_x, self.board_y = board_height, board_width
 
-        if args.cuda:
-            self.nnet.cuda()
+        # if args.cuda:
+        #     self.nnet.cuda()
 
     def train(self, examples):
         """

@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 import numpy as np
 import math
 
@@ -39,6 +39,9 @@ class Agent:
             range(len(calculate_start_positions(self.board_width, self.board_height, self.max_angle)))) if agent_type == "zombie" else list(
             range(self.board_height * self.board_width))
         self.current_step = 0
+
+    def get_neural_network(self):
+        return None
 
     @abstractmethod
     def select_action(self, state):

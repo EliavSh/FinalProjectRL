@@ -58,6 +58,9 @@ class DdqnAgent(Agent):
         self.memory = ReplayMemory(self.memory_size)
         self.device = device
 
+    def get_neural_network(self):
+        return self.policy_net
+
     def select_action(self, state):
 
         state = torch.from_numpy(state).flatten().unsqueeze(0)
@@ -68,13 +71,13 @@ class DdqnAgent(Agent):
         if rate > random_number:
 
             # take an action whom one of the zombies locations
-            x = np.array(state)
-            z = np.argwhere(x[0:int(len(x) / 2)] > 0)
-            y = np.resize(z, len(z))
-            if len(y) == 0:
-                action = random.randrange(self.num_actions)
-            else:
-                action = random.sample(list(y), 1)[0]
+            # x = np.array(state)
+            # z = np.argwhere(x[0:int(len(x) / 2)] > 0)
+            # y = np.resize(z, len(z))
+            # if len(y) == 0:
+            #     action = random.randrange(self.num_actions)
+            # else:
+            #     action = random.sample(list(y), 1)[0]
 
             action = random.randrange(self.num_actions)
 

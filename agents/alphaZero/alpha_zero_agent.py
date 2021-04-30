@@ -44,6 +44,9 @@ class AlphaZeroAgent(Agent):
         self.train_examples = []
         self.train_examples_history = []
 
+    def get_neural_network(self):
+        return self.nnet.nnet
+
     def select_action(self, state):
         rate = self.strategy.get_exploration_rate(current_step=self.current_step)
         self.current_step += 1
