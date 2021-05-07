@@ -1,12 +1,17 @@
 pygame==1.9.6
 torch-summary==1.4.5
-tqdm
+tqdm~=4.58.0
 torch-summary
-scipy
-pandas
-matplotlib
+scipy~=1.6.1
+pandas~=1.2.3
+matplotlib~=3.3.4
 tensorboard==1.15
 future
 # conda install pytorch==1.2.0 torchvision==0.4.0 -c pytorch
 tensorflow==1.15
 
+
+numpy~=1.20.1
+torchvision~=0.4.0
+pillow~=8.1.1
+seaborn~=0.11.1
