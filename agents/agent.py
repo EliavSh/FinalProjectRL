@@ -41,6 +41,9 @@ class Agent:
         self.current_step = 0
 
     def get_neural_network(self):
+        """
+        :return: the NN used by the agent, for tensorboard purposes
+        """
         return None
 
     @abstractmethod

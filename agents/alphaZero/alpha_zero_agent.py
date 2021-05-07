@@ -29,14 +29,18 @@ class AlphaZeroAgent(Agent):
         self.cpuct = float(self.alpha_zero_info['cpuct'])
         self.update_threshold = float(self.alpha_zero_info['update_threshold'])
         self.arena_compare = int(self.alpha_zero_info['arena_compare'])
-        self.checkpoint = self.alpha_zero_info['checkpoint']
-        self.load_model = bool(self.alpha_zero_info['load_model'])
-        self.load_folder_file = self.alpha_zero_info['load_folder_file']
+        self.checkpoint = os.path.join(self.alpha_zero_info['checkpoint'], self.agent_type + "_player", self.__class__.__name__,
+                                       "board_" + str(self.board_height) + "_" + str(self.board_width))
+        self.load_model = eval(self.alpha_zero_info['load_model'])
 
         if agent_type == 'zombie':
             self.nnet = NNetWrapper(self.board_width, self.board_height, len(self.possible_actions))
         else:
             self.nnet = NNetWrapper(self.board_width, self.board_height * 2, len(self.possible_actions))
+
+        if self.load_model:
+            self.nnet.load_checkpoint(folder=self.checkpoint, filename='best.pth.tar')
+
         self.pnet = self.nnet
         self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
                          self.light_size, self.max_hit_points)
@@ -74,7 +78,6 @@ class AlphaZeroAgent(Agent):
 
         if self.current_episode % self.num_episode_per_learning == 0 and self.current_step < self.end_learning_step:
             # once every 'something' episodes
-            self.saveTrainExamples(self.current_episode)
 
             # shuffle examples before training
             trainExamples = []
@@ -121,25 +124,3 @@ class AlphaZeroAgent(Agent):
     @staticmethod
     def getCheckpointFile(iteration):
         return 'checkpoint_' + str(iteration) + '.pth.tar'
-
-    def saveTrainExamples(self, iteration):
-        folder = self.checkpoint
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-        filename = os.path.join(folder, self.getCheckpointFile(iteration) + ".examples")
-        f = open(filename, "wb+")
-        Pickler(f).dump(self.train_examples_history)
-
-    def loadTrainExamples(self):
-        modelFile = self.load_folder_file
-        examplesFile = modelFile + ".examples"
-        if not os.path.isfile(examplesFile):
-            log.warning(f'File "{examplesFile}" with trainExamples not found!')
-            r = input("Continue? [y|n]")
-            if r != "y":
-                sys.exit()
-        else:
-            log.info("File with trainExamples found. Loading it...")
-            f = open(examplesFile, "rb")
-            self.train_examples_history = Unpickler(f).load()
-            log.info('Loading done!')
