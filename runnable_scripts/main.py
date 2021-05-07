@@ -20,10 +20,10 @@ def main(l_agent, z_agent):
 
     # create the game with the required agents
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = Game(device, light_agent=l_agent, zombie_agent=z_agent)
+    env = Game(device, light_agent=l_agent, zombie_agent=z_agent, dir_path=dir_path)
 
     # play the game and produce the dictionaries of the results
-    episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game(dir_path)
+    episodes_dict, steps_dict_light, steps_dict_zombie = env.play_zero_sum_game()
 
     # save and create results graph
     results_file_name = 'results_' + time.strftime('%d_%m_%Y_%H_%M')
