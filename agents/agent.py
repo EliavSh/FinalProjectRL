@@ -1,3 +1,4 @@
+import os
 from abc import abstractmethod, ABC
 import numpy as np
 import math
@@ -32,6 +33,9 @@ class Agent:
         self.max_hit_points = int(main_info['max_hit_points'])
         self.heal_points = float(main_info['heal_points'])
         self.end_learning_step = self.num_train_episodes * (self.zombies_per_episode + self.board_width)
+        self.saved_model_path = os.path.join(main_info['checkpoint'], agent_type + "_player", self.__class__.__name__,
+                                             "board_" + str(self.board_height) + "_" + str(self.board_width))
+        self.load_model = eval(main_info['load_model'])
 
         self.agent_type = agent_type
         self.strategy = EpsilonGreedyStrategy(self.num_train_episodes, self.zombies_per_episode, self.board_width, config['StrategyInfo'])

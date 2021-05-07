@@ -1,3 +1,5 @@
+import os
+
 from strategies.epsilonGreedyStrategy import EpsilonGreedyStrategy
 from core.replayMemory import ReplayMemory
 from core.experience import Experience
@@ -111,6 +113,29 @@ class DdqnAgent(Agent):
         if self.current_step % self.target_update == 0:
             # update the target net to the same weights as the policy net
             self.target_net.load_state_dict(self.policy_net.state_dict())
+            self.save_checkpoint(self.saved_model_path, self.get_checkpoint_file(self.current_step))
 
     def reset(self):
         pass
+
+    def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+        filepath = os.path.join(folder, filename)
+        if not os.path.exists(folder):
+            print("Checkpoint Directory does not exist! Making directory {}".format(folder))
+            os.mkdir(folder)
+        else:
+            print("Checkpoint Directory exists! ")
+        torch.save({
+            'state_dict': self.target_net.state_dict(),
+        }, filepath)
+
+    def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+        filepath = os.path.join(folder, filename)
+        if not os.path.exists(filepath):
+            raise ("No model in path {}".format(filepath))
+        checkpoint = torch.load(filepath, map_location='cpu')
+        self.target_net.load_state_dict(checkpoint['state_dict'])
+
+    @staticmethod
+    def get_checkpoint_file(iteration):
+        return 'checkpoint_' + str(iteration) + '.pth.tar'

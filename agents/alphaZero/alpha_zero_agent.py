@@ -29,9 +29,6 @@ class AlphaZeroAgent(Agent):
         self.cpuct = float(self.alpha_zero_info['cpuct'])
         self.update_threshold = float(self.alpha_zero_info['update_threshold'])
         self.arena_compare = int(self.alpha_zero_info['arena_compare'])
-        self.checkpoint = os.path.join(self.alpha_zero_info['checkpoint'], self.agent_type + "_player", self.__class__.__name__,
-                                       "board_" + str(self.board_height) + "_" + str(self.board_width))
-        self.load_model = eval(self.alpha_zero_info['load_model'])
 
         if agent_type == 'zombie':
             self.nnet = NNetWrapper(self.board_width, self.board_height, len(self.possible_actions))
@@ -39,7 +36,7 @@ class AlphaZeroAgent(Agent):
             self.nnet = NNetWrapper(self.board_width, self.board_height * 2, len(self.possible_actions))
 
         if self.load_model:
-            self.nnet.load_checkpoint(folder=self.checkpoint, filename='best.pth.tar')
+            self.nnet.load_checkpoint(folder=self.saved_model_path, filename='best.pth.tar')
 
         self.pnet = self.nnet
         self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
@@ -86,8 +83,8 @@ class AlphaZeroAgent(Agent):
             shuffle(trainExamples)
 
             # training new network, keeping a copy of the old one
-            self.nnet.save_checkpoint(folder=self.checkpoint, filename='temp.pth.tar')
-            self.pnet.load_checkpoint(folder=self.checkpoint, filename='temp.pth.tar')
+            self.nnet.save_checkpoint(folder=self.saved_model_path, filename='temp.pth.tar')
+            self.pnet.load_checkpoint(folder=self.saved_model_path, filename='temp.pth.tar')
             pmcts = MCTS(self.pnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
                          self.light_size, self.max_hit_points)
 
@@ -107,20 +104,20 @@ class AlphaZeroAgent(Agent):
                 log.info('NEW/PREV WINS : %d / %d' % (nwins, pwins))
                 if pwins + nwins == 0 or float(nwins) / (pwins + nwins) < self.update_threshold:
                     log.info('REJECTING NEW MODEL')
-                    self.nnet.load_checkpoint(folder=self.checkpoint, filename='temp.pth.tar')
+                    self.nnet.load_checkpoint(folder=self.saved_model_path, filename='temp.pth.tar')
                 else:
                     log.info('ACCEPTING NEW MODEL')
-                    self.nnet.save_checkpoint(folder=self.checkpoint,
-                                              filename=self.getCheckpointFile(self.current_episode))
-                    self.nnet.save_checkpoint(folder=self.checkpoint, filename='best.pth.tar')
+                    self.nnet.save_checkpoint(folder=self.saved_model_path,
+                                              filename=self.get_checkpoint_file(self.current_episode))
+                    self.nnet.save_checkpoint(folder=self.saved_model_path, filename='best.pth.tar')
             else:
-                self.nnet.save_checkpoint(folder=self.checkpoint,
-                                          filename=self.getCheckpointFile(self.current_episode))
-                self.nnet.save_checkpoint(folder=self.checkpoint, filename='best.pth.tar')
+                self.nnet.save_checkpoint(folder=self.saved_model_path,
+                                          filename=self.get_checkpoint_file(self.current_episode))
+                self.nnet.save_checkpoint(folder=self.saved_model_path, filename='best.pth.tar')
 
         self.mcts = MCTS(self.nnet, self.possible_actions, self.agent_type, self.alpha_zero_info, self.board_height, self.board_width, self.heal_points,
                          self.light_size, self.max_hit_points)  # initiate the mcts for next episode
 
     @staticmethod
-    def getCheckpointFile(iteration):
+    def get_checkpoint_file(iteration):
         return 'checkpoint_' + str(iteration) + '.pth.tar'
