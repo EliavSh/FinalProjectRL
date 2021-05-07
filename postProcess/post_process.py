@@ -177,8 +177,8 @@ class PostProcess:
             encoding='utf-8-sig')
 
     def plot_comparison_results(self, rewards_of_all_agents: Dict[str, Dict[str, Any]], best_results: Dict[int, pd.DataFrame], player_type: str):
-        header = 'Comparison of ' + self.smart_agent + ' as ' + self.upper_first_letter(player_type) + ' Player vs. all Simple Agents'
-        fig, axes = self.create_figure(len(self.boards), 1, 12, 9, header, 28)
+        header = 'Comparison of ' + self.smart_agent + ' as ' + self.upper_first_letter(player_type) + ' Player vs. All Simple Agents'
+        fig, axes = self.create_figure(len(self.boards), 1, 12, 9, header, 24)
 
         for i, board in enumerate(self.boards):
             best_result = best_results[board]
