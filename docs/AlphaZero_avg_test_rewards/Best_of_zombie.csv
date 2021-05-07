@@ -1,0 +1,13 @@
+﻿,monte_carlo_searches,cpuct,Average Test Reward
+Single Action Agent,5.0,0.5,20.0
+Double Action Agent,5.0,0.5,14.8
+Uniform Agent,10.0,1.5,13.0
+Gaussian Agent,15.0,1.5,15.0
+Single Action Agent,10.0,0.5,20.0
+Double Action Agent,10.0,1.5,20.0
+Uniform Agent,5.0,0.5,9.86
+Gaussian Agent,15.0,1.5,14.34
+Single Action Agent,5.0,1.0,20.0
+Double Action Agent,5.0,1.0,20.0
+Uniform Agent,15.0,1.0,4.42
+Gaussian Agent,5.0,0.5,6.76
