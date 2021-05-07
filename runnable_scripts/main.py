@@ -34,30 +34,36 @@ def main(l_agent, z_agent):
 
 
 if __name__ == "__main__":
-    temp = 1
-    light_agent = ConstantAgent
-    zombie_agent = AlphaZeroAgent
-    if temp == 1:
-        for iteration in [1, 2]:
-            for board in range(10, 31, 10):
-                for monte_carlo_searches in [5, 10, 15]:
-                    for cpuct in [0.5, 1, 1.5]:
-                        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
-                                            'configs', 'config.ini')
-                        parser = RawConfigParser()
-                        parser.read(path)
-                        parser.set('MainInfo', 'board_height', str(board))
-                        parser.set('MainInfo', 'board_width', str(board))
-                        if issubclass(zombie_agent, Agent):  # if the zombie player is smart, light is bigger
-                            parser.set('MainInfo', 'light_size', str(board // 3))
-                        else:
-                            parser.set('MainInfo', 'light_size', str(2))
-                        parser.set('AlphaZeroInfo', 'monte_carlo_searches', str(monte_carlo_searches))
-                        parser.set('AlphaZeroInfo', 'cpuct', str(cpuct))
-                        config_file = open(path, 'w')
-                        parser.write(config_file, space_around_delimiters=True)
-                        config_file.close()
+    temp = 2
+    set_ups = [{"light_agent": AlphaZeroAgent, "zombie_agent": UniformAgent, "board": 10, "monte_carlo_searches": 15, "cpuct": 1.5},
+               {"light_agent": AlphaZeroAgent, "zombie_agent": UniformAgent, "board": 20, "monte_carlo_searches": 15, "cpuct": 1},
+               {"light_agent": AlphaZeroAgent, "zombie_agent": UniformAgent, "board": 30, "monte_carlo_searches": 15, "cpuct": 1},
+               {"light_agent": UniformAgent, "zombie_agent": AlphaZeroAgent, "board": 10, "monte_carlo_searches": 10, "cpuct": 1.5},
+               {"light_agent": UniformAgent, "zombie_agent": AlphaZeroAgent, "board": 20, "monte_carlo_searches": 15, "cpuct": 1.5},
+               {"light_agent": UniformAgent, "zombie_agent": AlphaZeroAgent, "board": 30, "monte_carlo_searches": 15, "cpuct": 1}]
 
-                        main(light_agent, zombie_agent)
-    elif temp == 2:
+    for set_up in set_ups:
+        # unpack set_up
+        light_agent = set_up["light_agent"]
+        zombie_agent = set_up["light_agent"]
+        board = set_up["board"]
+        monte_carlo_searches = set_up["monte_carlo_searches"]
+        cpuct = set_up["cpuct"]
+
+        path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
+                            'configs', 'config.ini')
+        parser = RawConfigParser()
+        parser.read(path)
+        parser.set('MainInfo', 'board_height', str(board))
+        parser.set('MainInfo', 'board_width', str(board))
+        if issubclass(zombie_agent, Agent):  # if the zombie player is smart, light is bigger
+            parser.set('MainInfo', 'light_size', str(board // 3))
+        else:
+            parser.set('MainInfo', 'light_size', str(2))
+        parser.set('AlphaZeroInfo', 'monte_carlo_searches', str(monte_carlo_searches))
+        parser.set('AlphaZeroInfo', 'cpuct', str(cpuct))
+        config_file = open(path, 'w')
+        parser.write(config_file, space_around_delimiters=True)
+        config_file.close()
+
         main(light_agent, zombie_agent)
