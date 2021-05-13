@@ -17,7 +17,6 @@ class Agent:
 
     def __init__(self, agent_type, config):
         main_info = config['MainInfo']
-        self.interactive_mode = bool(main_info['interactive_mode'])
         self.display_width = int(main_info['display_width'])
         self.display_height = int(main_info['display_height'])
         self.num_train_episodes = int(main_info['num_train_episodes'])
@@ -35,7 +34,7 @@ class Agent:
         self.end_learning_step = self.num_train_episodes * (self.zombies_per_episode + self.board_width)
         self.saved_model_path = os.path.join(main_info['checkpoint'], agent_type + "_player", self.__class__.__name__,
                                              "board_" + str(self.board_height) + "_" + str(self.board_width))
-        self.load_model = eval(main_info['load_model'])
+        self.load_model = main_info.getboolean('load_model')
 
         self.agent_type = agent_type
         self.strategy = EpsilonGreedyStrategy(self.num_train_episodes, self.zombies_per_episode, self.board_width, config['StrategyInfo'])
