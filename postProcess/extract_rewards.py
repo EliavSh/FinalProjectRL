@@ -1,9 +1,7 @@
 import os
 import shutil
 
-from numpy import linspace
-
-dir_name = "Testing random vs max action choosing AND 3 vs 4 conv layers"
+dir_name = "alphazero_vs_const_double_gaussian_uniform"
 
 # create rewards dir
 path = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results", dir_name, 'rewards')
@@ -13,10 +11,17 @@ if not os.path.exists(path):
 
 str_arr = []
 
-for cpuct in list(range(4)):
-    str_arr.append('cpuct_' + str(cpuct))
+for name in ['ConstantAgent', 'DoubleConstantAgent', 'GaussianAgent', 'UniformAgent']:
+    str_arr.append('AlphaZero vs ' + name + ' on board 10')
+    str_arr.append('AlphaZero vs ' + name + ' on board 20')
+    str_arr.append('AlphaZero vs ' + name + ' on board 30')
+    str_arr.append(name + ' vs AlphaZero' + ' on board 10')
+    str_arr.append(name + ' vs AlphaZero' + ' on board 20')
+    str_arr.append(name + ' vs AlphaZero' + ' on board 30')
 
 for root, dirs, files in os.walk(
         os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)), "results", dir_name)):
-    if len(files) == 6:  # for the root, doesn't contains any files - only folders
-        shutil.copyfile(root + '\\' + files[4], path + '\\' + str_arr.pop(0) + ' .png')
+    if 'rewards' in dirs:
+        dirs.remove('rewards')
+    if len(files) > 0:
+        shutil.copyfile(root + '\\' + files[files.index('ultimate_ridge_box_plot.png')], path + '\\' + str_arr.pop(0) + ' .png')
