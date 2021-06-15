@@ -60,7 +60,6 @@ class Game:
         self.max_hit_points = int(main_info['max_hit_points'])
         self.current_time = 0
         self.alive_zombies = []  # list of the currently alive zombies
-        self.all_zombies = []  # list of all zombies (from all time)
         self.max_velocity = int(main_info['max_velocity'])
         self.dt = int(main_info['dt'])
         self.device = device
@@ -91,7 +90,6 @@ class Game:
         self.current_time = 0
         Zombie.reset_id()
         self.alive_zombies = []  # list of the currently alive zombies
-        self.all_zombies = []  # list of all zombies (from all time)
         self.current_screen = None
         self.agent_light.reset()
         self.agent_zombie.reset()
@@ -182,7 +180,6 @@ class Game:
         # add new zombie
         new_zombie = Game.create_zombie(zombie_action, self.max_angle, self.max_velocity, self.board_width, self.board_height, self.dt, self.light_size)
         self.alive_zombies.append(new_zombie)
-        self.all_zombies.append(new_zombie)
 
         # move all zombies one step and calc reward
         reward, self.alive_zombies = Game.calc_reward_and_move_zombies(self.alive_zombies, light_action, self.board_height, self.board_width,

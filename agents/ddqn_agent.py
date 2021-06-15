@@ -57,8 +57,7 @@ class DdqnAgent(Agent):
                                                                              self.board_height, self.board_width)
         # load network from config
         if self.load_model:
-            self.policy_net.load_checkpoint(folder=self.saved_model_path, filename='best.pth.tar')
-            self.target_net.load_checkpoint(folder=self.saved_model_path, filename='best.pth.tar')
+            self.load_checkpoint(folder=self.saved_model_path, filename='best.pth.tar')
 
         # other fields
         self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=self.lr)
@@ -120,7 +119,7 @@ class DdqnAgent(Agent):
         if self.current_step % self.target_update == 0:
             # update the target net to the same weights as the policy net
             self.target_net.load_state_dict(self.policy_net.state_dict())
-            self.save_checkpoint(self.saved_model_path, self.get_checkpoint_file(self.current_step))
+            # self.save_checkpoint(self.saved_model_path, self.get_checkpoint_file(self.current_step))
 
     def reset(self):
         pass
@@ -141,7 +140,7 @@ class DdqnAgent(Agent):
         if not os.path.exists(filepath):
             raise ("No model in path {}".format(filepath))
         checkpoint = torch.load(filepath, map_location='cpu')
-        self.target_net.load_state_dict(checkpoint['state_dict'])
+        self.policy_net.load_state_dict(checkpoint['state_dict'])
 
     @staticmethod
     def get_checkpoint_file(iteration):
