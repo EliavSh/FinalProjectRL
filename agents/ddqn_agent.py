@@ -53,7 +53,11 @@ class DdqnAgent(Agent):
         self.target_update = int(ddqn_info['target_update'])
 
         # init networks
-        self.num_actions, self.target_net, self.policy_net = create_networks(device, agent_type, self.possible_actions, self.board_height, self.board_width)
+        self.num_actions, self.target_net, self.policy_net = create_networks(device, agent_type, self.possible_actions,
+                                                                             self.board_height, self.board_width)
+        # load network from config
+        if self.load_model:
+            self.load_checkpoint(folder=self.saved_model_path, filename='best.pth.tar')
 
         # other fields
         self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=self.lr)
@@ -88,7 +92,8 @@ class DdqnAgent(Agent):
             with torch.no_grad():
                 # here we are getting the action from one pass along the network. after that we:
                 # convert the tensor to data, then move to cpu using then converting to numpy and lastly, wrapping back to tensor
-                action = self.policy_net(state).argmax(dim=1).data.cpu().numpy()[0]  # TODO WTF is this: " max over rows! (dim=0) "
+                action = self.policy_net(state).argmax(dim=1).data.cpu().numpy()[
+                    0]  # TODO WTF is this: " max over rows! (dim=0) "
                 return action, rate, self.current_step
 
     def learn(self, state, action, next_state, reward):
@@ -96,7 +101,8 @@ class DdqnAgent(Agent):
         state = torch.from_numpy(state).flatten().unsqueeze(0)
         next_state = torch.from_numpy(next_state).flatten().unsqueeze(0)
 
-        self.memory.push(Experience(state, torch.tensor([action], device=self.device), next_state, torch.tensor([reward], device=self.device)))
+        self.memory.push(Experience(state, torch.tensor([action], device=self.device), next_state,
+                                    torch.tensor([reward], device=self.device)))
         if self.memory.can_provide_sample(self.batch_size) and self.current_step < self.end_learning_step:
             experiences = self.memory.sample(self.batch_size)
             states, actions, rewards, next_states = extract_tensors(experiences)
@@ -113,7 +119,7 @@ class DdqnAgent(Agent):
         if self.current_step % self.target_update == 0:
             # update the target net to the same weights as the policy net
             self.target_net.load_state_dict(self.policy_net.state_dict())
-            self.save_checkpoint(self.saved_model_path, self.get_checkpoint_file(self.current_step))
+            # self.save_checkpoint(self.saved_model_path, self.get_checkpoint_file(self.current_step))
 
     def reset(self):
         pass
@@ -134,7 +140,7 @@ class DdqnAgent(Agent):
         if not os.path.exists(filepath):
             raise ("No model in path {}".format(filepath))
         checkpoint = torch.load(filepath, map_location='cpu')
-        self.target_net.load_state_dict(checkpoint['state_dict'])
+        self.policy_net.load_state_dict(checkpoint['state_dict'])
 
     @staticmethod
     def get_checkpoint_file(iteration):

@@ -297,10 +297,12 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
             ax_objs[-2].set_xticklabels([])
             ax_objs[-2].axis("off")
 
+        test_title = 'Test Episodes:'
         if i == 0:  # first row, starting with 'Episodes' header
             remove_x_axis()
+            title = test_title if num_of_learning_episodes == 0 else "Episodes:"
             ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
-                             'Episodes: \n\n' + str(int(step * episodes_per_graph) + 1) + ' - ' + str(
+                             title + ' \n\n' + str(int(step * episodes_per_graph) + 1) + ' - ' + str(
                                  int(step * episodes_per_graph + episodes_per_graph)) + '\n', fontweight="bold",
                              fontsize=14, ha="right", color='white')
         elif step * episodes_per_graph < num_of_learning_episodes:  # all the rows until the test episodes
@@ -312,8 +314,9 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
         elif i != len(steps_zombie) - 1 and test_episodes_start_flag:  # first test episode, starting with header
             test_episodes_start_flag = False
             remove_x_axis()
+            title = '' if num_of_learning_episodes == 0 else "Test Episodes:"
             ax_objs[-1].text(x_start - len(x_zombie) / 100, y_start,
-                             'Test Episodes: \n\n' + str(int(step * episodes_per_graph) + 1) + ' - ' + str(
+                             title + ' \n\n' + str(int(step * episodes_per_graph) + 1) + ' - ' + str(
                                  int(step * episodes_per_graph + episodes_per_graph)) + '\n', fontweight="bold",
                              fontsize=14, ha="right", color='white')
         elif i != len(steps_zombie) - 1:  # for all test episodes between the first and the last
@@ -338,7 +341,7 @@ def ridge_plot_train_test_together(dir_path, xlsx_name):
     plt.figlegend(handles=legend_elements, loc='lower left')
 
     plt.tight_layout(rect=(0, 0, 1, 0.95))
-    plt.suptitle("Actions and rewards distribution along different ranges of episodes", fontsize=30, color='white')
+    plt.suptitle("Action and Reward Distributions over Episode Range", fontsize=30, color='white')
 
     plt.savefig(os.path.join(dir_path, 'ultimate_ridge_box_plot.png'), bbox_inches="tight")
     print('finished plotting action-reward ridge-box plots')
@@ -523,7 +526,7 @@ def create_data_for_separate_plot(dir_path, xlsx_name, number_of_train_graphs, n
         df = pd.read_excel(os.path.join(dir_path, xlsx_name), sheet_name=sheet)
 
         # calc number of training episodes while considering backwards compatibility
-        df_info = pd.read_excel(dir_path + xlsx_name, sheet_name='info', index_col=0)
+        df_info = pd.read_excel(os.path.join(dir_path, xlsx_name), sheet_name='info', index_col=0)
         if 'num_train_episodes' in df_info.index.array:
             num_train_episodes = int(df_info.loc['num_train_episodes'])
         else:
